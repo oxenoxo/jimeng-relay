@@ -1,0 +1,10 @@
+node_modules/
+outputs/*
+!outputs/.gitkeep
+jimeng-relay.db
+jimeng-relay.db-*
+.env
+server.js
+worker.js
+start.sh
+.DS_Store
