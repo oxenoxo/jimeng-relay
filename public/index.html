@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>即梦中转站</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%236366f1%22/><text x=%2250%22 y=%2268%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2250%22 font-family=%22sans-serif%22>&#9670;</text></svg>">
 <style>
 :root {
   --bg: #0a0a0f;
@@ -14,7 +15,7 @@
   --border-focus: #3a3a55;
   --text: #e8e8f0;
   --text-secondary: #8888a0;
-  --text-muted: #555570;
+  --text-muted: #8888a0;
   --accent: #6366f1;
   --accent-hover: #818cf8;
   --accent-soft: rgba(99,102,241,.12);
@@ -199,6 +200,17 @@ body {
 .gen-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
 .gen-btn svg { width: 18px; height: 18px; }
 
+/* focus-visible */
+.nav-tab:focus-visible, .filter-tab:focus-visible, .mode-btn:focus-visible,
+.model-chip:focus-visible, .ratio-btn:focus-visible, .res-btn:focus-visible,
+.prompt-area:focus-visible, .prompt-secondary:focus-visible, .gen-btn:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px;
+}
+
+/* active states */
+.nav-tab:active, .filter-tab:active, .mode-btn:active, .model-chip:active,
+.ratio-btn:active, .res-btn:active { transform: scale(.97); }
+
 /* Results Panel */
 .results-panel { flex:1; padding:24px; overflow-y: auto; }
 
@@ -247,8 +259,14 @@ body {
 .status-badge.failed { background: var(--red-bg); color: var(--red); }
 
 @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+@keyframes pendingPulse { 0%,100%{opacity:.4} 50%{opacity:.8} }
+.pending-dot {
+  width: 24px; height: 24px; border: 2px solid var(--border);
+  border-radius: 50%; animation: pendingPulse 2s ease-in-out infinite;
+}
 
 .card-info { padding: 10px 12px; }
+.card[onclick] { cursor: pointer; }
 .card-prompt {
   font-size: 12px; color: var(--text); line-height: 1.4;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
@@ -285,23 +303,42 @@ body {
 }
 .empty-state svg { width:48px; height:48px; opacity:.3; margin-bottom:4px; }
 
-/* Error toast */
+/* Toast */
 .toast {
   position: fixed; bottom: 24px; right: 24px;
   padding: 12px 20px; border-radius: var(--radius-sm);
-  background: var(--red-bg); color: var(--red); font-size:13px;
-  border: 1px solid rgba(239,68,68,.3);
-  z-index: 100; display:none; max-width: 360px;
+  font-size:13px; z-index: 300; max-width: 360px;
+  opacity: 0; transform: translateY(8px);
+  transition: opacity .2s, transform .2s;
+  pointer-events: none;
 }
+.toast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.toast.success { color: var(--green); background: var(--green-bg); border: 1px solid rgba(34,197,94,.3); }
+.toast.error { color: var(--red); background: var(--red-bg); border: 1px solid rgba(239,68,68,.3); }
+.toast.info { color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(99,102,241,.3); }
 
-/* Modal for image preview */
+/* Modal */
 .modal-overlay {
   position: fixed; inset: 0; background: rgba(0,0,0,.85);
   display:flex; align-items:center; justify-content:center;
   z-index: 200; cursor: pointer;
+  animation: fadeIn .15s;
 }
-.modal-content { max-width: 90vw; max-height: 90vh; }
+.modal-content { position: relative; max-width: 90vw; max-height: 90vh; }
 .modal-content img, .modal-content video { max-width:90vw; max-height:90vh; border-radius: var(--radius); }
+.modal-close {
+  position: absolute; top: -40px; right: 0;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(255,255,255,.1); border: none; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 18px; transition: background .15s;
+}
+.modal-close:hover { background: rgba(255,255,255,.2); }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+/* card enter animation */
+.card { animation: cardIn .3s ease-out; }
+@keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
 <body>
@@ -314,15 +351,15 @@ body {
     </div>
 
     <nav class="nav-tabs">
-      <button class="nav-tab active" data-filter="all">
+      <button type="button" class="nav-tab active" data-filter="all">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        全部资产
+        全部
       </button>
-      <button class="nav-tab" data-filter="image">
+      <button type="button" class="nav-tab" data-filter="image">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
         图片
       </button>
-      <button class="nav-tab" data-filter="video">
+      <button type="button" class="nav-tab" data-filter="video">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg>
         视频
       </button>
@@ -344,8 +381,8 @@ body {
       <!-- Create Panel -->
       <section class="create-panel">
         <div class="mode-switch" id="modeSwitch">
-          <button class="mode-btn active" data-mode="image">图片生成</button>
-          <button class="mode-btn" data-mode="video">视频生成</button>
+          <button type="button" class="mode-btn active" data-mode="image">图片生成</button>
+          <button type="button" class="mode-btn" data-mode="video">视频生成</button>
         </div>
 
         <div>
@@ -381,7 +418,7 @@ body {
           </div>
         </div>
 
-        <button class="gen-btn" id="genBtn" onclick="submitTask()">
+        <button type="button" class="gen-btn" id="genBtn" onclick="submitTask()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 6h6l-5 4 2 6-5-3.5L7 19l2-6-5-4h6z"/></svg>
           开始生成
         </button>
@@ -390,9 +427,9 @@ body {
       <!-- Results Panel -->
       <section class="results-panel" id="resultsPanel">
         <div class="filter-tabs">
-          <button class="filter-tab active" data-filter="all">全部</button>
-          <button class="filter-tab" data-filter="completed">已完成</button>
-          <button class="filter-tab" data-filter="processing">生成中</button>
+          <button type="button" class="filter-tab active" data-filter="all">全部</button>
+          <button type="button" class="filter-tab" data-filter="completed">已完成</button>
+          <button type="button" class="filter-tab" data-filter="processing">生成中</button>
         </div>
         <div class="gallery" id="gallery">
           <div class="empty-state">
@@ -409,6 +446,22 @@ body {
 <div class="toast" id="toast"></div>
 
 <script>
+// API config: query ?api= URL > localStorage > local relative
+(function(){
+  const q = new URLSearchParams(location.search);
+  const fromUrl = q.get('api');
+  if (fromUrl) {
+    try { localStorage.setItem('jimeng_api_base', fromUrl); }
+    catch(e) {}
+    history.replaceState(null, '', location.pathname);
+  }
+  window.API_BASE = (function(){
+    try { return localStorage.getItem('jimeng_api_base') || ''; }
+    catch(e) { return ''; }
+  })();
+  if (window.API_BASE) console.log('[中转站] 后端:', window.API_BASE);
+})();
+
 // State
 let currentMode = 'image';
 let sidebarFilter = 'all';
@@ -451,15 +504,27 @@ let selectedResolution = '2k';
 let selectedDuration = 5;
 
 // Init
+let pollTimer, healthTimer;
 document.addEventListener('DOMContentLoaded', () => {
   setupModeSwitch();
   setupSidebar();
   setupFilterTabs();
   renderSettings();
   refreshTasks();
-  setInterval(refreshTasks, 4000);
-  setInterval(checkHealth, 15000);
+  pollTimer = setInterval(refreshTasks, 4000);
+  healthTimer = setInterval(checkHealth, 15000);
   checkHealth();
+});
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    clearInterval(pollTimer);
+    clearInterval(healthTimer);
+  } else {
+    refreshTasks();
+    checkHealth();
+    pollTimer = setInterval(refreshTasks, 4000);
+    healthTimer = setInterval(checkHealth, 15000);
+  }
 });
 
 function setupModeSwitch() {
@@ -487,7 +552,7 @@ function setupSidebar() {
       sidebarFilter = tab.dataset.filter;
       document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
-      renderResultFilter();
+      refreshTasks();
     });
   });
 }
@@ -511,22 +576,21 @@ function renderSettings() {
   document.getElementById('modelChips').innerHTML = models.map(m => {
     const active = m.id === selectedModel ? ' active' : '';
     const rec = m.recommended ? ' · 推荐' : '';
-    return `<button class="model-chip${active}" data-model="${m.id}" onclick="selectModel('${m.id}')">${m.label}<span style="font-size:10px;color:var(--text-muted);margin-left:4px;">${rec}</span></button>`;
+    return `<button type="button" class="model-chip${active}" data-model="${m.id}" onclick="selectModel('${m.id}')">${m.label}<span style="font-size:10px;color:var(--text-muted);margin-left:4px;">${rec}</span></button>`;
   }).join('');
 
   document.getElementById('ratioGrid').innerHTML = ratios.map(r => {
     const active = r.id === selectedRatio ? ' active' : '';
-    return `<button class="ratio-btn${active}" data-ratio="${r.id}" onclick="selectRatio('${r.id}')"><div style="font-size:14px;">${r.icon}</div><div style="font-size:10px;margin-top:2px;color:var(--text-muted);">${r.label}</div></button>`;
+    return `<button type="button" class="ratio-btn${active}" data-ratio="${r.id}" onclick="selectRatio('${r.id}')"><div style="font-size:14px;">${r.icon}</div><div style="font-size:10px;margin-top:2px;color:var(--text-muted);">${r.label}</div></button>`;
   }).join('');
 
   document.getElementById('resGrid').innerHTML = ress.map(r => {
     const active = r.id === selectedResolution ? ' active' : '';
-    return `<button class="res-btn${active}" data-res="${r.id}" onclick="selectRes('${r.id}')">${r.label}</button>`;
+    return `<button type="button" class="res-btn${active}" data-res="${r.id}" onclick="selectRes('${r.id}')">${r.label}</button>`;
   }).join('');
 
-  document.querySelectorAll('#durationSlider').forEach(s => {
-    s.value = selectedDuration;
-  });
+  const ds = document.getElementById('durationSlider');
+  if (ds) ds.value = selectedDuration;
 }
 
 window.selectModel = (id) => { selectedModel = id; renderSettings(); };
@@ -535,40 +599,47 @@ window.selectRes = (id) => { selectedResolution = id; renderSettings(); };
 
 document.getElementById('durationSlider')?.addEventListener('input', function() {
   selectedDuration = parseInt(this.value);
-  document.querySelector('.duration-val').textContent = selectedDuration + 's';
+  const valEl = document.querySelector('.duration-val');
+  if (valEl) valEl.textContent = selectedDuration + 's';
   document.getElementById('durationLabel').textContent = selectedDuration + '秒';
 });
 
 async function checkHealth() {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
   try {
-    const r = await fetch('/api/health');
+    const r = await fetch(API_BASE + '/api/health');
     const d = await r.json();
-    const dot = document.getElementById('statusDot');
-    const text = document.getElementById('statusText');
     if (d.status === 'ok') { dot.className = 'status-dot on'; text.textContent = '服务运行中'; }
     else { dot.className = 'status-dot'; text.textContent = '服务异常'; }
   } catch(e) {
-    document.getElementById('statusDot').className = 'status-dot';
-    document.getElementById('statusText').textContent = '连接失败';
+    dot.className = 'status-dot';
+    text.textContent = '后端离线';
   }
 }
 
 async function submitTask() {
   const prompt = document.getElementById('promptInput').value.trim();
-  if (!prompt) { showToast('请输入提示词'); return; }
+  if (!prompt) {
+    showToast('请输入提示词', 'error');
+    document.getElementById('promptInput').focus();
+    return;
+  }
 
   const btn = document.getElementById('genBtn');
+  const savedPrompt = prompt;
+  const savedNeg = document.getElementById('negPrompt').value.trim();
   btn.disabled = true;
   btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> 提交中...';
 
   try {
-    const res = await fetch('/api/tasks', {
+    const res = await fetch(API_BASE + '/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         type: currentMode,
-        prompt,
-        negative_prompt: document.getElementById('negPrompt').value.trim(),
+        prompt: savedPrompt,
+        negative_prompt: savedNeg,
         model: selectedModel,
         ratio: selectedRatio,
         resolution: selectedResolution,
@@ -581,12 +652,16 @@ async function submitTask() {
       document.getElementById('promptInput').value = '';
       document.getElementById('negPrompt').value = '';
       refreshTasks();
-      showToast('任务已提交，等待生成...');
+      showToast('任务已提交，等待生成...', 'success');
     } else {
-      showToast(data.error || '提交失败');
+      document.getElementById('promptInput').value = savedPrompt;
+      document.getElementById('negPrompt').value = savedNeg;
+      showToast(data.error || '提交失败', 'error');
     }
   } catch(e) {
-    showToast('网络错误: ' + e.message);
+    document.getElementById('promptInput').value = savedPrompt;
+    document.getElementById('negPrompt').value = savedNeg;
+    showToast('网络错误: ' + (e.message || '未知错误'), 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M12 3l2 6h6l-5 4 2 6-5-3.5L7 19l2-6-5-4h6z"/></svg> 开始生成';
@@ -595,15 +670,12 @@ async function submitTask() {
 
 async function refreshTasks() {
   try {
-    const res = await fetch('/api/tasks?limit=100');
+    const res = await fetch(API_BASE + '/api/tasks?limit=100');
     const data = await res.json();
     renderGallery(data.tasks || []);
-    document.getElementById('taskCount').textContent = `共 ${data.tasks.length} 个任务`;
-  } catch(e) {}
-}
-
-function renderResultFilter() {
-  refreshTasks();
+  } catch(e) {
+    console.warn('[中转站] 刷新任务失败:', e.message);
+  }
 }
 
 function renderGallery(tasks) {
@@ -618,12 +690,19 @@ function renderGallery(tasks) {
     filtered = filtered.filter(t => t.status === 'pending' || t.status === 'processing');
   }
 
+  // Update task count with filtered number
+  document.getElementById('taskCount').textContent = `共 ${tasks.length} 个任务`;
+
   const gallery = document.getElementById('gallery');
   if (filtered.length === 0) {
+    const hasFilters = sidebarFilter !== 'all' || resultFilter !== 'all';
+    const msg = hasFilters ? '当前筛选条件下无结果' : '还没有作品';
+    const sub = hasFilters ? '尝试调整筛选条件' : '在左侧面板输入提示词开始创作';
+
     gallery.innerHTML = `<div class="empty-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
-      <div style="font-size:14px;color:var(--text-secondary);">还没有作品</div>
-      <div style="font-size:12px;color:var(--text-muted);">在左侧输入提示词开始创作</div>
+      <div style="font-size:14px;color:var(--text-secondary);">${msg}</div>
+      ${sub ? `<div style="font-size:12px;color:var(--text-muted);">${sub}</div>` : ''}
     </div>`;
     return;
   }
@@ -632,20 +711,23 @@ function renderGallery(tasks) {
     const isVideo = t.type === 'video';
     const statusClass = t.status;
     const statusMap = { pending:'排队中', processing:'生成中', completed:'已完成', failed:'失败' };
+    const resUrl = (u) => u && (u.startsWith('/') && !u.startsWith('//') ? API_BASE.replace(/\/+$/, '') + u : u);
+    const encUrl = (u) => (resUrl(u) || '').replace(/'/g, '\\\'');
 
     let mediaHTML = '';
     if (t.status === 'processing' || t.status === 'pending') {
+      const isPending = t.status === 'pending';
       mediaHTML = `<div class="processing-placeholder">
-        <div class="spinner"></div>
+        <div class="pending-dot ${isPending ? '' : 'spinner'}"></div>
         <span style="font-size:12px;color:var(--text-muted);">${statusMap[t.status]}</span>
       </div>`;
     } else if (t.status === 'completed' && t.output_url) {
       const urls = t.output_url.split(',');
-      const mainUrl = urls[0];
+      const mainUrl = resUrl(urls[0]);
       if (isVideo) {
-        mediaHTML = `<video src="${mainUrl}" poster="" controls preload="metadata" onclick="event.stopPropagation()" style="width:100%;height:100%;object-fit:cover;"></video>`;
+        mediaHTML = `<video src="${mainUrl}" controls preload="none" playsinline onclick="event.stopPropagation()" style="width:100%;height:100%;object-fit:cover;"></video>`;
       } else {
-        mediaHTML = `<img src="${mainUrl}" alt="${escapeHtml(t.prompt)}" loading="lazy" onclick="openPreview('${mainUrl}','${isVideo}')">`;
+        mediaHTML = `<img src="${mainUrl}" alt="${escapeHtml(t.prompt)}" loading="lazy" onerror="this.style.display=&quot;none&quot;;this.parentElement.innerHTML=&quot;&lt;div class=&apos;processing-placeholder&apos; style=&apos;color:var(--text-muted)&apos;&gt;加载失败&lt;/div&gt;&quot;">`;
       }
     } else if (t.status === 'failed') {
       mediaHTML = `<div class="processing-placeholder" style="color:var(--red);">
@@ -657,17 +739,21 @@ function renderGallery(tasks) {
     let dlButtons = '';
     if (t.status === 'completed' && t.output_url) {
       const urls = t.output_url.split(',');
-      dlButtons = urls.map((u,i) => `<a href="${u}" target="_blank" download onclick="event.stopPropagation()">下载${urls.length>1?i+1:''}</a>`).join('');
+      dlButtons = urls.map((u,i) => `<a href="${resUrl(u)}" target="_blank" download onclick="event.stopPropagation()">下载${urls.length>1?i+1:''}</a>`).join('');
     }
 
     const errorInfo = t.status === 'failed' && t.error_message
-      ? `<div style="font-size:10px;color:var(--red);margin-top:4px;">${escapeHtml(t.error_message.substring(0,40))}...</div>` : '';
+      ? `<div style="font-size:11px;color:var(--red);margin-top:4px;line-height:1.3;" title="${escapeHtml(t.error_message)}">${escapeHtml(t.error_message.length > 60 ? t.error_message.substring(0,60)+'...' : t.error_message)}</div>` : '';
 
     const modelTag = t.model ? t.model.replace('jimeng-','').replace('video-','v') : '';
 
-    return `<div class="card" onclick="${t.status==='completed'&&t.output_url?`openPreview('${(t.output_url.split(',')[0])}','${isVideo}')`:''}">
+    const cardOnclick = t.status === 'completed' && t.output_url
+      ? `onclick="openPreview('${encUrl(t.output_url.split(',')[0])}',${isVideo})"`
+      : '';
+
+    return `<div class="card" ${cardOnclick}>
       <div class="card-media">
-        ${t.type !== 'image' ? `<span class="type-badge">${isVideo?'视频':'图片'}</span>` : ''}
+        <span class="type-badge">${isVideo?'视频':'图片'}</span>
         ${t.status !== 'completed' ? `<span class="status-badge ${statusClass}">${statusMap[t.status]}</span>` : ''}
         ${mediaHTML}
       </div>
@@ -688,15 +774,31 @@ function renderGallery(tasks) {
 function openPreview(url, isVideo) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
-  overlay.onclick = () => overlay.remove();
+  overlay.onclick = () => closeModal(overlay);
   const content = document.createElement('div');
   content.className = 'modal-content';
+  content.onclick = (e) => e.stopPropagation();
   if (isVideo) {
-    content.innerHTML = `<video src="${url}" controls autoplay style="max-width:90vw;max-height:90vh;border-radius:var(--radius);"></video>`;
+    content.innerHTML = `<video src="${url}" controls autoplay playsinline style="max-width:90vw;max-height:90vh;border-radius:var(--radius);"></video>`;
   } else {
     content.innerHTML = `<img src="${url}" style="max-width:90vw;max-height:90vh;border-radius:var(--radius);">`;
   }
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'modal-close';
+  closeBtn.type = 'button';
+  closeBtn.innerHTML = '&times;';
+  closeBtn.onclick = () => closeModal(overlay);
+  content.appendChild(closeBtn);
   overlay.appendChild(content);
+
+  function closeModal(ov) {
+    const v = ov.querySelector('video'); if (v) v.pause();
+    document.removeEventListener('keydown', escHandler);
+    ov.remove();
+  }
+  function escHandler(e) { if (e.key === 'Escape') closeModal(overlay); }
+  document.addEventListener('keydown', escHandler);
+
   document.body.appendChild(overlay);
 }
 
@@ -706,11 +808,14 @@ function escapeHtml(s) {
   return d.innerHTML;
 }
 
-function showToast(msg) {
+let toastTimer;
+function showToast(msg, type) {
+  type = type || 'info';
   const t = document.getElementById('toast');
+  clearTimeout(toastTimer);
   t.textContent = msg;
-  t.style.display = 'block';
-  setTimeout(() => t.style.display = 'none', 3000);
+  t.className = 'toast ' + type + ' show';
+  toastTimer = setTimeout(() => { t.classList.remove('show'); }, 3000);
 }
 
 // Keyboard shortcut

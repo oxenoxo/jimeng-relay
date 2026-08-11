@@ -8,3 +8,4 @@ server.js
 worker.js
 start.sh
 .DS_Store
+restart.sh
