@@ -72,6 +72,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible 
 .session { display:flex; gap:8px; align-items:center; padding: 7px 7px; border-radius:8px; cursor:pointer; color:var(--text-2); min-width:0; }
 .session:hover { background:rgba(255,255,255,.055); color:var(--text); }
 .session.active { background:rgba(255,255,255,.09); color:var(--text); }
+.session.session-focus { animation: sessionFocus 1.2s ease-out; }
+@keyframes sessionFocus { 0% { box-shadow: inset 0 0 0 1px var(--cyan); } 100% { box-shadow: inset 0 0 0 1px transparent; } }
 .session-thumb { width: 28px; height:28px; border-radius:6px; object-fit:cover; background:var(--panel-3); flex:0 0 auto; }
 .session-thumb.empty { display:grid; place-items:center; color:var(--text-3); font-size:12px; }
 .session-name { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:11px; }
@@ -278,6 +280,7 @@ const VIDEO_RES = ['720p','1080p'];
 
 let currentMode = 'video';
 let selectedModel = VIDEO_MODELS[0].id;
+let selectedSessionId = null;
 let activeTab = new URLSearchParams(location.search).get('tab') || 'all';
 let tasksCache = new Map();
 let lastSignature = '';
@@ -350,7 +353,8 @@ function renderSessions(tasks) {
   const recent = tasks.filter(t => t.prompt).slice(0, 18);
   list.innerHTML = recent.length ? recent.map((t,i) => {
     const url = t.output_url ? resolveUrl(t.output_url.split(',')[0]) : '';
-    return `<div class="session ${i===0?'active':''}" data-session-id="${t.id}">${url && t.type==='image' ? `<img class="session-thumb" src="${escapeHtml(url)}" alt="">` : `<div class="session-thumb empty">${t.type==='video'?'▶':'✦'}</div>`}<span class="session-name">${escapeHtml(t.prompt.slice(0,18))}</span><span class="session-time">${formatTime(t.created_at)}</span></div>`;
+    const active = String(t.id) === String(selectedSessionId || recent[0]?.id) ? 'active' : '';
+    return `<div class="session ${active}" data-session-id="${t.id}">${url && t.type==='image' ? `<img class="session-thumb" src="${escapeHtml(url)}" alt="">` : `<div class="session-thumb empty">${t.type==='video'?'▶':'✦'}</div>`}<span class="session-name">${escapeHtml(t.prompt.slice(0,18))}</span><span class="session-time">${formatTime(t.created_at)}</span></div>`;
   }).join('') : '<div class="session"><div class="session-thumb empty">✦</div><span class="session-name">默认创作</span></div>';
 }
 
@@ -426,6 +430,23 @@ function openModal(url, video) {
 }
 
 document.addEventListener('click', e => {
+  const session = e.target.closest('.session[data-session-id]');
+  if (session) {
+    selectedSessionId = session.dataset.sessionId;
+    document.querySelectorAll('.session[data-session-id]').forEach(item => item.classList.toggle('active', item === session));
+    if (activeTab !== 'all') { activeTab = 'all'; updateUrl(); applyFilters(); }
+    const message = document.querySelector(`.message[data-task-id="${CSS.escape(selectedSessionId)}"]`);
+    if (message) {
+      message.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      message.classList.remove('session-focus');
+      void message.offsetWidth;
+      message.classList.add('session-focus');
+    } else {
+      setToast('这条对话正在加载，请稍候', 'info');
+      refreshTasks();
+    }
+    return;
+  }
   const preview = e.target.closest('[data-preview-url]'); if (preview) { e.stopPropagation(); openModal(preview.dataset.previewUrl, preview.tagName==='VIDEO'); return; }
   const action = e.target.closest('[data-action]'); const message = e.target.closest('.message');
   if (action && message) {
