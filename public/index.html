@@ -3,828 +3,447 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>即梦中转站</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%236366f1%22/><text x=%2250%22 y=%2268%22 text-anchor=%22middle%22 fill=%22white%22 font-size=%2250%22 font-family=%22sans-serif%22>&#9670;</text></svg>">
+<title>即梦 · 开始创作</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2224%22 fill=%22%230f1014%22/><path d=%22M19 16l18 28 43 11-38 5-22 24 14-29z%22 fill=%22%2345d5d7%22/></svg>">
 <style>
 :root {
-  --bg: #0a0a0f;
-  --bg-panel: #111118;
-  --bg-card: #16161f;
-  --bg-input: #1a1a26;
-  --border: #252530;
-  --border-focus: #3a3a55;
-  --text: #e8e8f0;
-  --text-secondary: #8888a0;
-  --text-muted: #8888a0;
-  --accent: #6366f1;
-  --accent-hover: #818cf8;
-  --accent-soft: rgba(99,102,241,.12);
-  --green: #22c55e;
-  --green-bg: rgba(34,197,94,.1);
-  --yellow: #eab308;
-  --yellow-bg: rgba(234,179,8,.1);
-  --red: #ef4444;
-  --red-bg: rgba(239,68,68,.1);
-  --radius: 12px;
-  --radius-sm: 8px;
-  --radius-lg: 16px;
+  --bg: #0c0d10;
+  --rail: #101116;
+  --panel: #15161b;
+  --panel-2: #1a1b21;
+  --panel-3: #202128;
+  --line: rgba(255,255,255,.075);
+  --line-strong: rgba(255,255,255,.13);
+  --text: #f0f1f4;
+  --text-2: #a1a4ad;
+  --text-3: #6e727c;
+  --cyan: #54d5d9;
+  --cyan-soft: rgba(84,213,217,.12);
+  --purple: #a58bff;
+  --green: #51d88a;
+  --yellow: #f0bf58;
+  --red: #fa7373;
+  --shadow: 0 14px 42px rgba(0,0,0,.36);
+  --r: 13px;
+  --r-sm: 9px;
 }
-* { margin:0; padding:0; box-sizing:border-box; }
+* { box-sizing: border-box; }
+html,body { height: 100%; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Microsoft YaHei", sans-serif;
+  margin: 0;
+  overflow: hidden;
   background: var(--bg);
   color: var(--text);
-  line-height: 1.5;
-  min-height: 100vh;
+  font-family: -apple-system,BlinkMacSystemFont,"SF Pro Display","PingFang SC","Microsoft YaHei",sans-serif;
+  font-size: 13px;
 }
-::-webkit-scrollbar { width: 4px; }
+button,input,textarea { font: inherit; }
+button { color: inherit; }
+button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 2px; }
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,.13); border-radius: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
 
-/* Layout */
-.app { display: flex; height: 100vh; overflow: hidden; }
+.app { height: 100%; display: grid; grid-template-columns: 56px 236px minmax(0,1fr); }
+.rail { background: var(--rail); border-right: 1px solid var(--line); display: flex; flex-direction: column; align-items: center; padding: 14px 0 11px; gap: 13px; }
+.brand-mark { width: 28px; height: 28px; display: grid; place-items:center; margin-bottom: 7px; }
+.brand-mark svg { width: 25px; height: 25px; }
+.rail-nav { display: flex; flex-direction: column; gap: 5px; width: 100%; align-items:center; }
+.rail-btn { width: 43px; height: 42px; border: 0; border-radius: 10px; background: transparent; color: var(--text-3); display:grid; place-items:center; cursor:pointer; transition: .16s; }
+.rail-btn svg { width: 19px; height:19px; }
+.rail-btn span { display:block; font-size: 10px; margin-top: 2px; }
+.rail-btn:hover { background: var(--panel-2); color: var(--text); }
+.rail-btn.active { color: var(--text); background: rgba(255,255,255,.08); }
+.rail-spacer { flex:1; }
+.rail-badge { width: 42px; padding: 7px 2px; border: 1px solid rgba(84,213,217,.26); border-radius: 10px; background: var(--cyan-soft); color: var(--cyan); text-align:center; font-size: 9px; line-height: 1.35; }
+.rail-avatar { width: 24px; height:24px; border-radius:50%; background: linear-gradient(135deg,#e86f9d,#7c73f7); display:grid; place-items:center; font-size:11px; }
 
-/* Sidebar */
-.sidebar {
-  width: 280px; min-width: 280px;
-  background: var(--bg-panel);
-  border-right: 1px solid var(--border);
-  display: flex; flex-direction: column;
-  padding: 16px;
-}
-.logo { display:flex; align-items:center; gap:10px; padding:4px 0 20px; }
-.logo-icon {
-  width: 32px; height: 32px; border-radius: 8px;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
-  display:flex; align-items:center; justify-content:center;
-  font-size:16px; color:#fff;
-}
-.logo-text { font-size: 16px; font-weight: 600; letter-spacing: -.3px; }
+.sessions { background: #131419; border-right: 1px solid var(--line); display:flex; flex-direction:column; min-width:0; }
+.sessions-head { display:flex; align-items:center; justify-content:space-between; padding: 17px 14px 12px; }
+.sessions-title { font-size: 14px; font-weight: 600; }
+.icon-btn { border:0; width: 28px; height:28px; display:grid; place-items:center; color: var(--text-2); background: transparent; border-radius:7px; cursor:pointer; }
+.icon-btn:hover { background: var(--panel-3); color: var(--text); }
+.icon-btn svg { width:15px; height:15px; }
+.new-chat { margin: 0 11px 13px; border:1px solid var(--line-strong); border-radius: 9px; background:var(--panel-2); padding: 9px 11px; display:flex; align-items:center; gap:8px; color: var(--text-2); cursor:pointer; }
+.new-chat:hover { color:var(--text); border-color:rgba(255,255,255,.22); background:var(--panel-3); }
+.new-chat svg { width:15px; height:15px; }
+.session-caption { padding: 4px 14px 7px; color:var(--text-3); font-size:11px; }
+.session-list { flex:1; overflow:auto; padding: 0 8px 14px; }
+.session { display:flex; gap:8px; align-items:center; padding: 7px 7px; border-radius:8px; cursor:pointer; color:var(--text-2); min-width:0; }
+.session:hover { background:rgba(255,255,255,.055); color:var(--text); }
+.session.active { background:rgba(255,255,255,.09); color:var(--text); }
+.session-thumb { width: 28px; height:28px; border-radius:6px; object-fit:cover; background:var(--panel-3); flex:0 0 auto; }
+.session-thumb.empty { display:grid; place-items:center; color:var(--text-3); font-size:12px; }
+.session-name { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; font-size:11px; }
+.session-time { margin-left:auto; color:var(--text-3); font-size:9px; }
 
-.nav-tabs { display:flex; flex-direction:column; gap:4px; margin-bottom: 20px; }
-.nav-tab {
-  display:flex; align-items:center; gap:10px;
-  padding: 10px 12px; border-radius: var(--radius-sm);
-  font-size: 14px; color: var(--text-secondary); cursor: pointer;
-  transition: all .15s; border:none; background:none; width:100%; text-align:left;
-}
-.nav-tab:hover { background: var(--bg-card); color: var(--text); }
-.nav-tab.active { background: var(--accent-soft); color: var(--accent); font-weight: 500; }
-.nav-tab svg { width:18px; height:18px; opacity:.7; flex-shrink:0; }
-.nav-tab.active svg { opacity:1; }
+.workspace { min-width:0; display:flex; flex-direction:column; background:var(--bg); }
+.topbar { height:54px; border-bottom:1px solid var(--line); display:flex; align-items:center; justify-content:flex-end; padding:0 22px; gap:7px; }
+.top-filter { border:0; border-radius:8px; background:rgba(255,255,255,.055); color:var(--text-2); padding:8px 10px; display:flex; align-items:center; gap:6px; cursor:pointer; font-size:11px; }
+.top-filter:hover { color:var(--text); background:rgba(255,255,255,.1); }
+.top-filter svg { width:13px; height:13px; }
+.connection { display:flex; align-items:center; gap:6px; margin-left:9px; color:var(--text-3); font-size:10px; }
+.connection-dot { width:6px; height:6px; border-radius:50%; background:var(--green); }
+.connection-dot.off { background:var(--red); }
 
-.task-count { font-size:12px; color: var(--text-muted); padding-left:12px; }
+.feed-wrap { flex:1; overflow:auto; position:relative; }
+.feed { width:min(760px, calc(100% - 64px)); margin:0 auto; padding: 28px 0 190px; }
+.feed-empty { min-height: 62vh; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; color:var(--text-2); }
+.feed-empty .empty-logo { width:48px; height:48px; border-radius:16px; background:var(--panel-2); display:grid; place-items:center; margin-bottom:15px; }
+.feed-empty svg { width:28px; height:28px; }
+.feed-empty strong { font-size:18px; font-weight:600; color:var(--text); }
+.feed-empty span { margin-top:7px; color:var(--text-3); font-size:12px; }
+.feed-empty button { margin-top:18px; border:1px solid var(--line-strong); background:var(--panel-2); color:var(--text-2); border-radius:8px; padding:8px 13px; cursor:pointer; }
+.feed-empty button:hover { color:var(--text); }
 
-/* Main */
-.main { flex:1; display:flex; flex-direction:column; overflow: hidden; }
+.message { margin-bottom:29px; animation: messageIn .24s ease-out; }
+@keyframes messageIn { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+.message-head { display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; }
+.message-avatar { width:28px; height:28px; border-radius:8px; background:var(--panel-3); color:var(--text-2); display:grid; place-items:center; flex:0 0 auto; }
+.message-avatar svg { width:15px; height:15px; }
+.message-copy { flex:1; min-width:0; }
+.message-prompt { color:var(--text); line-height:1.65; white-space:pre-wrap; word-break:break-word; }
+.message-meta { display:flex; flex-wrap:wrap; gap:7px; margin-top:4px; color:var(--text-3); font-size:10px; }
+.message-meta b { color:var(--text-2); font-weight:500; }
+.message-actions { margin-left:auto; display:flex; gap:4px; opacity:.72; }
+.message-actions button { border:0; background:transparent; color:var(--text-2); width:25px; height:25px; border-radius:6px; cursor:pointer; }
+.message-actions button:hover { background:var(--panel-2); color:var(--text); }
+.message-actions svg { width:14px; height:14px; }
+.asset { margin-left:38px; border-radius:12px; overflow:hidden; border:1px solid var(--line); background: #101115; box-shadow:var(--shadow); position:relative; }
+.asset img,.asset video { display:block; width:100%; max-height:530px; object-fit:contain; background:#090a0d; cursor:pointer; }
+.asset-grid { display:grid; gap:3px; }
+.asset-grid.two { grid-template-columns:1fr 1fr; }
+.asset-grid.four { grid-template-columns:1fr 1fr; }
+.asset-grid img { width:100%; aspect-ratio: 1.12; object-fit:cover; cursor:pointer; }
+.asset-placeholder { height:220px; display:grid; place-items:center; color:var(--text-3); }
+.asset-placeholder .loader { width:29px; height:29px; border:2px solid rgba(255,255,255,.15); border-top-color:var(--cyan); border-radius:50%; animation:spin .8s linear infinite; }
+.asset-placeholder p { margin:10px 0 0; font-size:11px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+.asset-footer { display:flex; align-items:center; gap:8px; padding:9px 10px; color:var(--text-3); font-size:10px; }
+.asset-footer .asset-status { display:flex; align-items:center; gap:5px; }
+.asset-status .dot { width:6px; height:6px; border-radius:50%; background:var(--green); }
+.asset-status.processing .dot { background:var(--cyan); animation:pending 1.2s infinite; }
+@keyframes pending { 50%{opacity:.35} }
+.asset-footer .spacer { flex:1; }
+.asset-footer button { border:0; background:transparent; color:var(--text-2); cursor:pointer; padding:4px 7px; border-radius:6px; }
+.asset-footer button:hover { background:var(--panel-2); color:var(--text); }
 
-/* Top bar */
-.topbar {
-  display:flex; align-items:center; justify-content:space-between;
-  padding: 16px 24px; border-bottom: 1px solid var(--border);
-}
-.topbar-title { font-size: 15px; font-weight: 500; }
-.topbar-status { display:flex; align-items:center; gap:6px; font-size:12px; color: var(--text-secondary); }
-.status-dot { width:6px; height:6px; border-radius:50%; }
-.status-dot.on { background: var(--green); box-shadow: 0 0 6px rgba(34,197,94,.4); }
+.composer-dock { position:fixed; left:292px; right:26px; bottom:18px; z-index:5; pointer-events:none; }
+.composer { pointer-events:auto; width:min(760px, calc(100% - 64px)); margin:0 auto; background:linear-gradient(160deg, rgba(37,38,46,.97), rgba(24,25,31,.98)); border:1px solid rgba(255,255,255,.13); border-radius:18px; box-shadow:0 16px 50px rgba(0,0,0,.47); padding:12px 13px 10px; }
+.composer-main { display:flex; align-items:flex-start; gap:10px; }
+.upload-btn { width:38px; height:42px; border:1px dashed rgba(255,255,255,.18); border-radius:9px; background:rgba(255,255,255,.035); color:var(--text-3); display:grid; place-items:center; cursor:pointer; flex:0 0 auto; }
+.upload-btn:hover { color:var(--text); border-color:var(--cyan); }
+.upload-btn svg { width:17px; height:17px; }
+.prompt-box { flex:1; min-width:0; }
+.prompt-input { width:100%; min-height:44px; max-height:130px; resize:none; color:var(--text); background:transparent; border:0; outline:none; line-height:1.55; padding:3px 0; }
+.prompt-input::placeholder { color:#777b86; }
+.prompt-hint { display:flex; justify-content:space-between; color:var(--text-3); font-size:10px; margin-top:5px; }
+.composer-controls { display:flex; align-items:center; flex-wrap:wrap; gap:5px; margin-top:10px; }
+.control { display:flex; align-items:center; gap:5px; border:1px solid rgba(255,255,255,.08); color:var(--text-2); background:rgba(255,255,255,.04); border-radius:8px; padding:7px 9px; cursor:pointer; font-size:10px; }
+.control:hover { color:var(--text); background:rgba(255,255,255,.08); }
+.control.active { color:var(--cyan); border-color:rgba(84,213,217,.35); background:var(--cyan-soft); }
+.control svg { width:13px; height:13px; }
+.control select { border:0; outline:0; background:transparent; color:inherit; font-size:10px; cursor:pointer; max-width:150px; }
+.control select option { background:#22232a; }
+.composer-end { margin-left:auto; display:flex; align-items:center; gap:8px; }
+.char-count { color:var(--text-3); font-size:10px; }
+.send-btn { width:34px; height:34px; display:grid; place-items:center; border:0; border-radius:50%; background:#3b3e48; color:#9fa4b0; cursor:pointer; transition:.15s; }
+.send-btn.ready { background:var(--cyan); color:#071012; }
+.send-btn:hover { transform:translateY(-1px); }
+.send-btn:disabled { opacity:.45; cursor:not-allowed; transform:none; }
 
-/* Content */
-.content { flex:1; display:flex; overflow:hidden; }
+.hidden { display:none !important; }
+.toast { position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-8px); opacity:0; pointer-events:none; transition:.2s; z-index:30; border:1px solid var(--line-strong); border-radius:9px; padding:9px 13px; background:var(--panel-3); color:var(--text); box-shadow:var(--shadow); font-size:12px; }
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.error { color:var(--red); border-color:rgba(250,115,115,.32); }
+.toast.success { color:var(--green); border-color:rgba(81,216,138,.32); }
+.modal { position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:40; display:grid; place-items:center; padding:30px; }
+.modal-inner { max-width:min(1000px,92vw); max-height:90vh; position:relative; }
+.modal-inner img,.modal-inner video { max-width:92vw; max-height:86vh; display:block; border-radius:12px; background:#08090c; }
+.modal-close { position:absolute; right:-42px; top:-42px; width:32px; height:32px; border:0; border-radius:50%; background:rgba(255,255,255,.13); color:#fff; font-size:21px; cursor:pointer; }
+.modal-close:hover { background:rgba(255,255,255,.23); }
 
-/* Creation Panel */
-.create-panel {
-  width: 420px; min-width: 420px;
-  padding: 24px; display:flex; flex-direction:column; gap:16px;
-  border-right: 1px solid var(--border);
-  overflow-y: auto;
+@media (max-width: 900px) {
+  .app { grid-template-columns:56px minmax(0,1fr); }
+  .sessions { display:none; }
+  .composer-dock { left:72px; right:12px; }
 }
-
-/* Mode Switch */
-.mode-switch {
-  display:flex; background: var(--bg-card); border-radius: var(--radius-sm);
-  padding: 3px; gap: 2px;
+@media (max-width: 600px) {
+  .rail { display:none; }
+  .app { display:block; }
+  .workspace { height:100%; }
+  .topbar { padding:0 12px; }
+  .top-filter:nth-child(n+3) { display:none; }
+  .feed { width:calc(100% - 24px); padding-top:18px; }
+  .asset { margin-left:0; }
+  .composer-dock { left:10px; right:10px; bottom:10px; }
+  .composer { width:100%; }
 }
-.mode-btn {
-  flex:1; padding: 8px 12px; border-radius: 6px;
-  font-size: 13px; font-weight: 500; cursor: pointer;
-  border:none; background:transparent; color: var(--text-secondary);
-  transition: all .15s;
-}
-.mode-btn.active { background: var(--accent); color: #fff; }
-
-/* Prompt Input */
-.prompt-area {
-  width: 100%; min-height: 120px; max-height: 200px;
-  padding: 14px 16px;
-  background: var(--bg-input); border: 1px solid var(--border);
-  border-radius: var(--radius); color: var(--text);
-  font-size: 14px; font-family: inherit; line-height: 1.6;
-  resize: vertical; outline: none;
-  transition: border-color .15s;
-}
-.prompt-area:focus { border-color: var(--border-focus); }
-.prompt-area::placeholder { color: var(--text-muted); }
-
-.prompt-secondary {
-  width: 100%; padding: 10px 14px;
-  background: var(--bg-input); border: 1px solid var(--border);
-  border-radius: var(--radius-sm); color: var(--text);
-  font-size: 13px; font-family: inherit; outline: none;
-}
-.prompt-secondary:focus { border-color: var(--border-focus); }
-.prompt-secondary::placeholder { color: var(--text-muted); }
-
-/* Settings Group */
-.setting-group { display:flex; flex-direction:column; gap: 6px; }
-.setting-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); text-transform: none; }
-
-/* Model Selector */
-.model-chips { display:flex; flex-wrap:wrap; gap:6px; }
-.model-chip {
-  padding: 6px 12px; border-radius: 16px;
-  font-size: 12px; font-weight: 500; cursor: pointer;
-  border: 1px solid var(--border); background: var(--bg-card);
-  color: var(--text-secondary); transition: all .15s;
-  white-space: nowrap;
-}
-.model-chip:hover { border-color: var(--border-focus); color: var(--text); }
-.model-chip.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-
-/* Ratio Selector */
-.ratio-grid { display:flex; gap:6px; flex-wrap:wrap; }
-.ratio-btn {
-  padding: 8px 12px; border-radius: var(--radius-sm);
-  font-size: 12px; cursor: pointer; text-align: center;
-  border: 1px solid var(--border); background: var(--bg-card);
-  color: var(--text-secondary); transition: all .15s;
-  min-width: 56px;
-}
-.ratio-btn:hover { border-color: var(--border-focus); color: var(--text); }
-.ratio-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-
-/* Resolution Selector */
-.res-grid { display:flex; gap:6px; }
-.res-btn {
-  padding: 6px 14px; border-radius: var(--radius-sm);
-  font-size: 12px; cursor: pointer;
-  border: 1px solid var(--border); background: var(--bg-card);
-  color: var(--text-secondary); transition: all .15s;
-}
-.res-btn:hover { border-color: var(--border-focus); color: var(--text); }
-.res-btn.active { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); }
-
-/* Duration (video) */
-.duration-row { display:flex; align-items:center; gap:12px; }
-.duration-val { font-size: 13px; font-weight: 500; color: var(--accent); min-width: 36px; }
-.duration-slider {
-  flex:1; -webkit-appearance:none; height:4px;
-  background: var(--border); border-radius:2px; outline:none;
-}
-.duration-slider::-webkit-slider-thumb {
-  -webkit-appearance:none; width:16px; height:16px; border-radius:50%;
-  background: var(--accent); cursor: pointer;
-}
-
-/* Generate Button */
-.gen-btn {
-  width: 100%; padding: 14px 24px;
-  border: none; border-radius: var(--radius);
-  font-size: 15px; font-weight: 600; cursor: pointer;
-  color: #fff;
-  background: linear-gradient(135deg, #6366f1, #a855f7);
-  transition: all .2s;
-  display:flex; align-items:center; justify-content:center; gap:8px;
-  position: relative; overflow: hidden;
-}
-.gen-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(99,102,241,.3); }
-.gen-btn:disabled { opacity: .5; cursor: not-allowed; transform: none; box-shadow: none; }
-.gen-btn svg { width: 18px; height: 18px; }
-
-/* focus-visible */
-.nav-tab:focus-visible, .filter-tab:focus-visible, .mode-btn:focus-visible,
-.model-chip:focus-visible, .ratio-btn:focus-visible, .res-btn:focus-visible,
-.prompt-area:focus-visible, .prompt-secondary:focus-visible, .gen-btn:focus-visible {
-  outline: 2px solid var(--accent); outline-offset: 1px;
-}
-
-/* active states */
-.nav-tab:active, .filter-tab:active, .mode-btn:active, .model-chip:active,
-.ratio-btn:active, .res-btn:active { transform: scale(.97); }
-
-/* Results Panel */
-.results-panel { flex:1; padding:24px; overflow-y: auto; }
-
-/* Filter tabs */
-.filter-tabs { display:flex; gap:12px; margin-bottom:20px; }
-.filter-tab {
-  font-size: 13px; cursor: pointer; padding-bottom: 6px;
-  border:none; background:none; color: var(--text-secondary);
-  border-bottom: 2px solid transparent; transition: all .15s;
-}
-.filter-tab:hover { color: var(--text); }
-.filter-tab.active { color: var(--text); border-bottom-color: var(--accent); }
-
-/* Gallery */
-.gallery { display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
-
-.card {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: var(--radius); overflow: hidden;
-  transition: border-color .15s, transform .15s;
-  cursor: default;
-}
-.card:hover { border-color: var(--border-focus); transform: translateY(-2px); }
-
-.card-media {
-  width: 100%; aspect-ratio: 1;
-  background: var(--bg-input); position: relative;
-  overflow: hidden; display:flex; align-items:center; justify-content:center;
-}
-.card-media img, .card-media video {
-  width: 100%; height: 100%; object-fit: cover;
-}
-.card-media .type-badge {
-  position: absolute; top:8px; left:8px;
-  padding: 2px 8px; border-radius: 10px;
-  font-size: 10px; font-weight: 600;
-  background: rgba(0,0,0,.6); color: #fff;
-}
-.card-media .status-badge {
-  position: absolute; top:8px; right:8px;
-  padding: 3px 8px; border-radius: 10px; font-size: 10px; font-weight: 500;
-}
-.status-badge.pending { background: var(--yellow-bg); color: var(--yellow); }
-.status-badge.processing { background: var(--accent-soft); color: var(--accent); animation: pulse 1.5s infinite; }
-.status-badge.completed { background: var(--green-bg); color: var(--green); }
-.status-badge.failed { background: var(--red-bg); color: var(--red); }
-
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
-@keyframes pendingPulse { 0%,100%{opacity:.4} 50%{opacity:.8} }
-.pending-dot {
-  width: 24px; height: 24px; border: 2px solid var(--border);
-  border-radius: 50%; animation: pendingPulse 2s ease-in-out infinite;
-}
-
-.card-info { padding: 10px 12px; }
-.card[onclick] { cursor: pointer; }
-.card-prompt {
-  font-size: 12px; color: var(--text); line-height: 1.4;
-  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  overflow: hidden; margin-bottom: 6px;
-}
-.card-meta { display:flex; align-items:center; gap:8px; font-size: 11px; color: var(--text-muted); }
-.card-meta .model-tag { color: var(--accent); }
-.card-meta .ratio-tag { padding: 1px 6px; background: var(--bg-input); border-radius: 4px; }
-.card-dl {
-  margin-top: 8px; display: flex; gap: 4px; flex-wrap: wrap;
-}
-.card-dl a {
-  font-size: 11px; color: var(--accent); text-decoration: none;
-  padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px;
-  background: var(--bg-input); transition: all .15s;
-}
-.card-dl a:hover { border-color: var(--accent); background: var(--accent-soft); }
-
-/* Processing placeholder */
-.processing-placeholder {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  height: 100%; color: var(--text-muted); gap:12px;
-}
-.spinner {
-  width: 32px; height: 32px; border: 3px solid var(--border);
-  border-top-color: var(--accent); border-radius: 50%;
-  animation: spin .8s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.empty-state {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  height: 60%; color: var(--text-muted); gap:8px; text-align:center;
-}
-.empty-state svg { width:48px; height:48px; opacity:.3; margin-bottom:4px; }
-
-/* Toast */
-.toast {
-  position: fixed; bottom: 24px; right: 24px;
-  padding: 12px 20px; border-radius: var(--radius-sm);
-  font-size:13px; z-index: 300; max-width: 360px;
-  opacity: 0; transform: translateY(8px);
-  transition: opacity .2s, transform .2s;
-  pointer-events: none;
-}
-.toast.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
-.toast.success { color: var(--green); background: var(--green-bg); border: 1px solid rgba(34,197,94,.3); }
-.toast.error { color: var(--red); background: var(--red-bg); border: 1px solid rgba(239,68,68,.3); }
-.toast.info { color: var(--accent); background: var(--accent-soft); border: 1px solid rgba(99,102,241,.3); }
-
-/* Modal */
-.modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,.85);
-  display:flex; align-items:center; justify-content:center;
-  z-index: 200; cursor: pointer;
-  animation: fadeIn .15s;
-}
-.modal-content { position: relative; max-width: 90vw; max-height: 90vh; }
-.modal-content img, .modal-content video { max-width:90vw; max-height:90vh; border-radius: var(--radius); }
-.modal-close {
-  position: absolute; top: -40px; right: 0;
-  width: 32px; height: 32px; border-radius: 50%;
-  background: rgba(255,255,255,.1); border: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  color: #fff; font-size: 18px; transition: background .15s;
-}
-.modal-close:hover { background: rgba(255,255,255,.2); }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-/* card enter animation */
-.card { animation: cardIn .3s ease-out; }
-@keyframes cardIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 </style>
 </head>
 <body>
 <div class="app">
-  <!-- Sidebar -->
-  <aside class="sidebar">
-    <div class="logo">
-      <div class="logo-icon">&#9670;</div>
-      <span class="logo-text">即梦中转站</span>
-    </div>
-
-    <nav class="nav-tabs">
-      <button type="button" class="nav-tab active" data-filter="all">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-        全部
-      </button>
-      <button type="button" class="nav-tab" data-filter="image">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-        图片
-      </button>
-      <button type="button" class="nav-tab" data-filter="video">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5,3 19,12 5,21"/></svg>
-        视频
-      </button>
+  <aside class="rail">
+    <div class="brand-mark"><svg viewBox="0 0 32 32" fill="none"><path d="M5 4l7 11 16 4-14 2-8 9 5-11z" fill="#54d5d9"/><path d="M12 15l6 2-5 1z" fill="#a58bff"/></svg></div>
+    <nav class="rail-nav">
+      <button type="button" class="rail-btn" data-rail="home" title="灵感"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11.5L12 4l9 7.5"/><path d="M5 10v9h14v-9M9 19v-5h6v5"/></svg><span>灵感</span></button>
+      <button type="button" class="rail-btn active" data-rail="generate" title="生成"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.1 7.9L22 12l-7.9 2.1L12 22l-2.1-7.9L2 12l7.9-2.1z"/></svg><span>生成</span></button>
+      <button type="button" class="rail-btn" data-rail="assets" title="资产"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16v13H4zM7 4h10v3H7z"/><path d="M8 11h8M8 15h5"/></svg><span>资产</span></button>
+      <button type="button" class="rail-btn" data-rail="canvas" title="画布"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v14H4zM8 5v14M16 5v14M4 10h16M4 15h16"/></svg><span>画布</span></button>
     </nav>
-    <div class="task-count" id="taskCount">共 0 个任务</div>
+    <div class="rail-spacer"></div>
+    <div class="rail-badge">会员分析<br><b>1.5万</b></div>
+    <button type="button" class="rail-btn" title="通知"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/></svg></button>
+    <div class="rail-avatar">梦</div>
   </aside>
 
-  <!-- Main -->
-  <main class="main">
-    <div class="topbar">
-      <span class="topbar-title" id="topbarTitle">图片生成</span>
-      <div class="topbar-status">
-        <span class="status-dot on" id="statusDot"></span>
-        <span id="statusText">服务运行中</span>
+  <aside class="sessions">
+    <div class="sessions-head"><span class="sessions-title">开始创作</span><button type="button" class="icon-btn" title="收起侧栏"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="5" width="16" height="14" rx="2"/><path d="M9 5v14"/></svg></button></div>
+    <button type="button" class="new-chat" id="newChat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/></svg>新对话</button>
+    <div class="session-caption">最近</div>
+    <div class="session-list" id="sessionList">
+      <div class="session"><div class="session-thumb empty">＋</div><span class="session-name">默认创作</span></div>
+    </div>
+  </aside>
+
+  <main class="workspace">
+    <header class="topbar">
+      <button type="button" class="top-filter" id="timeFilter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>时间⌄</button>
+      <button type="button" class="top-filter" id="typeFilter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M5 5h14v4H5zM5 12h14v4H5z"/></svg>生成模式⌄</button>
+      <button type="button" class="top-filter" id="statusFilter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M7 12h10M10 17h4"/></svg>操作类型⌄</button>
+      <button type="button" class="top-filter" id="assetsFilter"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16v13H4zM7 4h10v3H7z"/></svg>资产库</button>
+      <div class="connection"><span class="connection-dot" id="connectionDot"></span><span id="connectionText">在线</span></div>
+    </header>
+
+    <section class="feed-wrap" id="feedWrap">
+      <div class="feed" id="feed">
+        <div class="feed-empty" id="feedEmpty">
+          <div class="empty-logo"><svg viewBox="0 0 32 32" fill="none"><path d="M5 4l7 11 16 4-14 2-8 9 5-11z" fill="#54d5d9"/><path d="M12 15l6 2-5 1z" fill="#a58bff"/></svg></div>
+          <strong>灵感即刻成片</strong>
+          <span>输入一段描述，生成图片或视频</span>
+          <button type="button" id="examplePrompt">试试示例提示词</button>
+        </div>
       </div>
-    </div>
-
-    <div class="content">
-      <!-- Create Panel -->
-      <section class="create-panel">
-        <div class="mode-switch" id="modeSwitch">
-          <button type="button" class="mode-btn active" data-mode="image">图片生成</button>
-          <button type="button" class="mode-btn" data-mode="video">视频生成</button>
-        </div>
-
-        <div>
-          <label class="setting-label" style="margin-bottom:6px;display:block;">提示词</label>
-          <textarea class="prompt-area" id="promptInput" placeholder="描述你想生成的画面，越详细效果越好..."></textarea>
-        </div>
-
-        <div>
-          <label class="setting-label" style="margin-bottom:6px;display:block;">负面提示词 <span style="font-weight:400;color:var(--text-muted);">· 可选</span></label>
-          <input class="prompt-secondary" id="negPrompt" placeholder="不想出现的内容...">
-        </div>
-
-        <div class="setting-group" id="modelGroup">
-          <label class="setting-label">模型</label>
-          <div class="model-chips" id="modelChips"></div>
-        </div>
-
-        <div class="setting-group">
-          <label class="setting-label">比例</label>
-          <div class="ratio-grid" id="ratioGrid"></div>
-        </div>
-
-        <div class="setting-group">
-          <label class="setting-label">分辨率</label>
-          <div class="res-grid" id="resGrid"></div>
-        </div>
-
-        <div class="setting-group" id="durationGroup" style="display:none;">
-          <label class="setting-label">时长 <span id="durationLabel">5秒</span></label>
-          <div class="duration-row">
-            <span class="duration-val">5s</span>
-            <input type="range" class="duration-slider" id="durationSlider" min="4" max="10" value="5" step="1">
-          </div>
-        </div>
-
-        <button type="button" class="gen-btn" id="genBtn" onclick="submitTask()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l2 6h6l-5 4 2 6-5-3.5L7 19l2-6-5-4h6z"/></svg>
-          开始生成
-        </button>
-      </section>
-
-      <!-- Results Panel -->
-      <section class="results-panel" id="resultsPanel">
-        <div class="filter-tabs">
-          <button type="button" class="filter-tab active" data-filter="all">全部</button>
-          <button type="button" class="filter-tab" data-filter="completed">已完成</button>
-          <button type="button" class="filter-tab" data-filter="processing">生成中</button>
-        </div>
-        <div class="gallery" id="gallery">
-          <div class="empty-state">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
-            <div style="font-size:14px;color:var(--text-secondary);">还没有作品</div>
-            <div style="font-size:12px;color:var(--text-muted);">在左侧输入提示词开始创作</div>
-          </div>
-        </div>
-      </section>
-    </div>
+    </section>
   </main>
 </div>
 
+<div class="composer-dock">
+  <section class="composer" aria-label="创作输入区">
+    <div class="composer-main">
+      <button type="button" class="upload-btn" id="uploadBtn" title="上传参考图（即将支持）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg><input id="fileInput" type="file" accept="image/*" multiple hidden></button>
+      <div class="prompt-box">
+        <textarea id="promptInput" class="prompt-input" maxlength="2000" placeholder="上传最多12个参考素材，输入文字或 @ 参考内容，自由组合图、文、音、视频多元素... 例如：@图片1 模仿 @视频1 的动作。"></textarea>
+        <div class="prompt-hint"><span>中文创作，描述越具体效果越好</span><span id="charCount">0/2000 · ⌘↵ 生成</span></div>
+      </div>
+    </div>
+    <div class="composer-controls">
+      <button type="button" class="control active" id="modeControl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v14H4zM7 8h10M7 12h7"/></svg><select id="modeSelect"><option value="image">图片生成</option><option value="video">视频生成</option></select></button>
+      <button type="button" class="control"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg><select id="modelSelect"></select></button>
+      <button type="button" class="control"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M4 12h16M4 17h16"/></svg><select id="refModeSelect"><option value="omni_reference">全能参考</option><option value="text_to_video">文生视频</option></select></button>
+      <button type="button" class="control"><select id="ratioSelect"></select></button>
+      <button type="button" class="control"><select id="resSelect"></select></button>
+      <button type="button" class="control" id="durationControl"><span>⏱</span><select id="durationSelect"><option value="5">5s</option><option value="6">6s</option><option value="8">8s</option><option value="10">10s</option></select></button>
+      <div class="composer-end"><span class="char-count" id="creditHint">积分按实际生成扣除</span><button type="button" class="send-btn" id="sendBtn" disabled title="开始生成"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h13M13 6l6 6-6 6"/></svg></button></div>
+    </div>
+  </section>
+</div>
 <div class="toast" id="toast"></div>
 
 <script>
-// API config: query ?api= URL > localStorage > local relative
 (function(){
   const q = new URLSearchParams(location.search);
   const fromUrl = q.get('api');
-  if (fromUrl) {
-    try { localStorage.setItem('jimeng_api_base', fromUrl); }
-    catch(e) {}
-    history.replaceState(null, '', location.pathname);
-  }
-  window.API_BASE = (function(){
-    try { return localStorage.getItem('jimeng_api_base') || ''; }
-    catch(e) { return ''; }
-  })();
-  if (window.API_BASE) console.log('[中转站] 后端:', window.API_BASE);
+  try {
+    if (fromUrl) localStorage.setItem('jimeng_api_base', fromUrl.replace(/\/+$/, ''));
+    window.API_BASE = (localStorage.getItem('jimeng_api_base') || '').replace(/\/+$/, '');
+  } catch(e) { window.API_BASE = fromUrl || ''; }
 })();
 
-// State
-let currentMode = 'image';
-let sidebarFilter = 'all';
-let resultFilter = 'all';
-
-// Configs
 const IMG_MODELS = [
-  { id:'jimeng-5.0', label:'5.0', desc:'指令最精准', recommended:true },
-  { id:'jimeng-4.5', label:'4.5', desc:'一致性最强' },
-  { id:'jimeng-4.1', label:'4.1', desc:'美学更专业' },
-  { id:'jimeng-4.0', label:'4.0', desc:'多参考图' },
-  { id:'jimeng-3.1', label:'3.1', desc:'经典通用' },
+  { id:'jimeng-5.0', label:'Seedream 5.0' },
+  { id:'jimeng-4.5', label:'Seedream 4.5' },
+  { id:'jimeng-4.1', label:'Seedream 4.1' },
+  { id:'jimeng-4.0', label:'Seedream 4.0' }
 ];
 const VIDEO_MODELS = [
-  { id:'jimeng-video-3.0-fast', label:'3.0 Fast', desc:'性价比高', recommended:true },
-  { id:'jimeng-video-3.0-pro', label:'3.0 Pro', desc:'画质最佳' },
-  { id:'jimeng-video-seedance-2.0-fast', label:'Seedance 2.0', desc:'全能参考' },
+  { id:'jimeng-video-seedance-2.0-fast', label:'Seedance 2.0 fast' },
+  { id:'jimeng-video-3.0-fast', label:'Seedance 3.0 mini' },
+  { id:'jimeng-video-3.0-pro', label:'Seedance 3.0 pro' }
 ];
-const IMG_RATIOS = [
-  { id:'1:1', label:'1:1', icon:'&#9633;', desc:'方形' },
-  { id:'16:9', label:'16:9', icon:'&#9641;', desc:'横屏' },
-  { id:'9:16', label:'9:16', icon:'&#9642;', desc:'竖屏' },
-  { id:'4:3', label:'4:3', icon:'&#9640;', desc:'' },
-  { id:'3:4', label:'3:4', icon:'&#9640;', desc:'' },
-  { id:'21:9', label:'21:9', icon:'&#9641;', desc:'超宽' },
-];
-const VIDEO_RATIOS = [
-  { id:'16:9', label:'16:9', icon:'&#9641;', desc:'横屏' },
-  { id:'9:16', label:'9:16', icon:'&#9642;', desc:'竖屏' },
-  { id:'1:1', label:'1:1', icon:'&#9633;', desc:'方形' },
-  { id:'4:3', label:'4:3', icon:'&#9640;', desc:'' },
-  { id:'3:4', label:'3:4', icon:'&#9640;', desc:'' },
-];
-const IMG_RES = [{ id:'2k', label:'2K' }, { id:'4k', label:'4K' }];
-const VIDEO_RES = [{ id:'720p', label:'720p' }, { id:'1080p', label:'1080p' }];
+const IMG_RATIOS = ['1:1','16:9','9:16','4:3','3:4','21:9'];
+const VIDEO_RATIOS = ['16:9','9:16','1:1','4:3','3:4','21:9'];
+const IMG_RES = ['2k','4k'];
+const VIDEO_RES = ['720p','1080p'];
 
-let selectedModel = 'jimeng-5.0';
-let selectedRatio = '1:1';
-let selectedResolution = '2k';
-let selectedDuration = 5;
+let currentMode = 'video';
+let selectedModel = VIDEO_MODELS[0].id;
+let activeTab = new URLSearchParams(location.search).get('tab') || 'all';
+let tasksCache = new Map();
+let lastSignature = '';
+let pollTimer = null;
+let healthTimer = null;
+let refreshInFlight = false;
+let toastTimer = null;
 
-// Init
-let pollTimer, healthTimer;
-document.addEventListener('DOMContentLoaded', () => {
-  setupModeSwitch();
-  setupSidebar();
-  setupFilterTabs();
-  renderSettings();
-  refreshTasks();
-  pollTimer = setInterval(refreshTasks, 4000);
-  healthTimer = setInterval(checkHealth, 15000);
-  checkHealth();
-});
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    clearInterval(pollTimer);
-    clearInterval(healthTimer);
-  } else {
-    refreshTasks();
-    checkHealth();
-    pollTimer = setInterval(refreshTasks, 4000);
-    healthTimer = setInterval(checkHealth, 15000);
-  }
-});
+const $ = id => document.getElementById(id);
+const promptInput = $('promptInput');
 
-function setupModeSwitch() {
-  document.querySelectorAll('#modeSwitch .mode-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      currentMode = btn.dataset.mode;
-      document.querySelectorAll('#modeSwitch .mode-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      document.getElementById('topbarTitle').textContent = currentMode === 'video' ? '视频生成' : '图片生成';
-      document.getElementById('durationGroup').style.display = currentMode === 'video' ? '' : 'none';
-      const models = currentMode === 'video' ? VIDEO_MODELS : IMG_MODELS;
-      const ratios = currentMode === 'video' ? VIDEO_RATIOS : IMG_RATIOS;
-      const ress = currentMode === 'video' ? VIDEO_RES : IMG_RES;
-      selectedModel = models.find(m=>m.recommended)?.id || models[0].id;
-      selectedRatio = ratios[0].id;
-      selectedResolution = ress[0].id;
-      renderSettings();
-    });
+function resolveUrl(url) {
+  if (!url) return '';
+  if (/^https?:\/\//i.test(url)) return url;
+  const base = (window.API_BASE || location.origin).replace(/\/+$/, '');
+  return url.startsWith('/') ? base + url : base + '/' + url;
+}
+function escapeHtml(value) {
+  const d = document.createElement('div'); d.textContent = String(value ?? ''); return d.innerHTML;
+}
+function setToast(message, type='info') {
+  const t = $('toast'); clearTimeout(toastTimer); t.textContent = message; t.className = `toast ${type} show`;
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+}
+function setConnection(ok) {
+  $('connectionDot').classList.toggle('off', !ok); $('connectionText').textContent = ok ? '在线' : (window.API_BASE ? '后端离线' : '未连接后端');
+}
+function formatTime(dateText) {
+  const d = new Date(String(dateText).replace(' ', 'T') + (String(dateText).includes('Z') ? '' : '+08:00'));
+  if (Number.isNaN(d.getTime())) return '';
+  const diff = Math.max(0, Date.now() - d.getTime());
+  if (diff < 60000) return '刚刚';
+  if (diff < 3600000) return `${Math.floor(diff/60000)}分钟前`;
+  if (diff < 86400000) return `${Math.floor(diff/3600000)}小时前`;
+  return `${d.getMonth()+1}月${d.getDate()}日`;
+}
+
+function renderSelects() {
+  const video = currentMode === 'video';
+  $('modelSelect').innerHTML = (video ? VIDEO_MODELS : IMG_MODELS).map(m => `<option value="${m.id}">${m.label}</option>`).join('');
+  $('modelSelect').value = selectedModel;
+  $('ratioSelect').innerHTML = (video ? VIDEO_RATIOS : IMG_RATIOS).map(r => `<option value="${r}">${r}</option>`).join('');
+  $('resSelect').innerHTML = (video ? VIDEO_RES : IMG_RES).map(r => `<option value="${r}">${r}</option>`).join('');
+  $('durationControl').classList.toggle('hidden', !video);
+  $('refModeSelect').innerHTML = video ? '<option value="omni_reference">全能参考</option><option value="text_to_video">文生视频</option>' : '<option value="text_to_image">文生图片</option><option value="reference">参考图生图</option>';
+  $('modeSelect').value = video ? 'video' : 'image';
+}
+function initControls() {
+  renderSelects();
+  $('modeSelect').addEventListener('change', () => {
+    currentMode = $('modeSelect').value; selectedModel = (currentMode === 'video' ? VIDEO_MODELS : IMG_MODELS)[0].id; renderSelects();
   });
+  $('modelSelect').addEventListener('change', e => selectedModel = e.target.value);
+  promptInput.addEventListener('input', () => { $('charCount').textContent = `${promptInput.value.length}/2000 · ⌘↵ 生成`; $('sendBtn').disabled = !promptInput.value.trim(); $('sendBtn').classList.toggle('ready', !!promptInput.value.trim()); });
+  promptInput.addEventListener('keydown', e => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); submitTask(); } });
+  $('sendBtn').addEventListener('click', submitTask);
+  $('newChat').addEventListener('click', () => { promptInput.value=''; promptInput.dispatchEvent(new Event('input')); promptInput.focus(); setToast('新对话已准备好','success'); });
+  $('examplePrompt').addEventListener('click', () => { promptInput.value='电影质感，海边公路上的银色跑车沿着悬崖缓慢行驶，夕阳从海面洒下金色光线，镜头平稳跟拍，画面细节丰富'; promptInput.dispatchEvent(new Event('input')); promptInput.focus(); });
+  $('uploadBtn').addEventListener('click', () => $('fileInput').click());
+  $('fileInput').addEventListener('change', e => { if (e.target.files.length) setToast(`已选择 ${e.target.files.length} 个参考素材，上传能力即将接入`,'info'); });
 }
 
-function setupSidebar() {
-  document.querySelectorAll('.nav-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      sidebarFilter = tab.dataset.filter;
-      document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      refreshTasks();
-    });
-  });
+function updateUrl() {
+  const p = new URLSearchParams(location.search); if (window.API_BASE) p.set('api', window.API_BASE); p.set('tab', activeTab); history.replaceState(null,'',`${location.pathname}?${p.toString()}`);
+}
+function setActiveTab(tab) { activeTab = tab; updateUrl(); applyFilters(); }
+
+function renderSessions(tasks) {
+  const list = $('sessionList');
+  const recent = tasks.filter(t => t.prompt).slice(0, 18);
+  list.innerHTML = recent.length ? recent.map((t,i) => {
+    const url = t.output_url ? resolveUrl(t.output_url.split(',')[0]) : '';
+    return `<div class="session ${i===0?'active':''}" data-session-id="${t.id}">${url && t.type==='image' ? `<img class="session-thumb" src="${escapeHtml(url)}" alt="">` : `<div class="session-thumb empty">${t.type==='video'?'▶':'✦'}</div>`}<span class="session-name">${escapeHtml(t.prompt.slice(0,18))}</span><span class="session-time">${formatTime(t.created_at)}</span></div>`;
+  }).join('') : '<div class="session"><div class="session-thumb empty">✦</div><span class="session-name">默认创作</span></div>';
 }
 
-function setupFilterTabs() {
-  document.querySelectorAll('.filter-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      resultFilter = tab.dataset.filter;
-      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      refreshTasks();
-    });
-  });
+function taskSignature(tasks) {
+  return tasks.map(t => `${t.id}|${t.status}|${t.output_url||''}|${t.error_message||''}`).join('~');
 }
-
-function renderSettings() {
-  const models = currentMode === 'video' ? VIDEO_MODELS : IMG_MODELS;
-  const ratios = currentMode === 'video' ? VIDEO_RATIOS : IMG_RATIOS;
-  const ress = currentMode === 'video' ? VIDEO_RES : IMG_RES;
-
-  document.getElementById('modelChips').innerHTML = models.map(m => {
-    const active = m.id === selectedModel ? ' active' : '';
-    const rec = m.recommended ? ' · 推荐' : '';
-    return `<button type="button" class="model-chip${active}" data-model="${m.id}" onclick="selectModel('${m.id}')">${m.label}<span style="font-size:10px;color:var(--text-muted);margin-left:4px;">${rec}</span></button>`;
-  }).join('');
-
-  document.getElementById('ratioGrid').innerHTML = ratios.map(r => {
-    const active = r.id === selectedRatio ? ' active' : '';
-    return `<button type="button" class="ratio-btn${active}" data-ratio="${r.id}" onclick="selectRatio('${r.id}')"><div style="font-size:14px;">${r.icon}</div><div style="font-size:10px;margin-top:2px;color:var(--text-muted);">${r.label}</div></button>`;
-  }).join('');
-
-  document.getElementById('resGrid').innerHTML = ress.map(r => {
-    const active = r.id === selectedResolution ? ' active' : '';
-    return `<button type="button" class="res-btn${active}" data-res="${r.id}" onclick="selectRes('${r.id}')">${r.label}</button>`;
-  }).join('');
-
-  const ds = document.getElementById('durationSlider');
-  if (ds) ds.value = selectedDuration;
+function applyFilters() {
+  const all = Array.from(tasksCache.values()).sort((a,b) => Number(b.id)-Number(a.id));
+  let filtered = all;
+  if (activeTab === 'image' || activeTab === 'video') filtered = filtered.filter(t => t.type === activeTab);
+  if (activeTab === 'processing') filtered = filtered.filter(t => t.status === 'pending' || t.status === 'processing');
+  renderFeed(filtered); renderSessions(all);
 }
-
-window.selectModel = (id) => { selectedModel = id; renderSettings(); };
-window.selectRatio = (id) => { selectedRatio = id; renderSettings(); };
-window.selectRes = (id) => { selectedResolution = id; renderSettings(); };
-
-document.getElementById('durationSlider')?.addEventListener('input', function() {
-  selectedDuration = parseInt(this.value);
-  const valEl = document.querySelector('.duration-val');
-  if (valEl) valEl.textContent = selectedDuration + 's';
-  document.getElementById('durationLabel').textContent = selectedDuration + '秒';
-});
-
-async function checkHealth() {
-  const dot = document.getElementById('statusDot');
-  const text = document.getElementById('statusText');
-  try {
-    const r = await fetch(API_BASE + '/api/health');
-    const d = await r.json();
-    if (d.status === 'ok') { dot.className = 'status-dot on'; text.textContent = '服务运行中'; }
-    else { dot.className = 'status-dot'; text.textContent = '服务异常'; }
-  } catch(e) {
-    dot.className = 'status-dot';
-    text.textContent = '后端离线';
-  }
-}
-
-async function submitTask() {
-  const prompt = document.getElementById('promptInput').value.trim();
-  if (!prompt) {
-    showToast('请输入提示词', 'error');
-    document.getElementById('promptInput').focus();
+function renderFeed(tasks) {
+  const feed = $('feed');
+  if (!tasks.length) {
+    feed.innerHTML = `<div class="feed-empty"><div class="empty-logo"><svg viewBox="0 0 32 32" fill="none"><path d="M5 4l7 11 16 4-14 2-8 9 5-11z" fill="#54d5d9"/><path d="M12 15l6 2-5 1z" fill="#a58bff"/></svg></div><strong>${activeTab==='processing'?'暂无生成中的任务':'灵感即刻成片'}</strong><span>${activeTab==='processing'?'任务完成后会自动出现在这里':'输入一段描述，生成图片或视频'}</span>${activeTab==='all'?'<button type="button" id="feedExample">试试示例提示词</button>':''}</div>`;
+    $('feedExample')?.addEventListener('click', () => { $('examplePrompt').click(); });
     return;
   }
-
-  const btn = document.getElementById('genBtn');
-  const savedPrompt = prompt;
-  const savedNeg = document.getElementById('negPrompt').value.trim();
-  btn.disabled = true;
-  btn.innerHTML = '<div class="spinner" style="width:18px;height:18px;border-width:2px;"></div> 提交中...';
-
-  try {
-    const res = await fetch(API_BASE + '/api/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        type: currentMode,
-        prompt: savedPrompt,
-        negative_prompt: savedNeg,
-        model: selectedModel,
-        ratio: selectedRatio,
-        resolution: selectedResolution,
-        duration: currentMode === 'video' ? selectedDuration : 5,
-        video_mode: 'text_to_video',
-      })
-    });
-    const data = await res.json();
-    if (data.success) {
-      document.getElementById('promptInput').value = '';
-      document.getElementById('negPrompt').value = '';
-      refreshTasks();
-      showToast('任务已提交，等待生成...', 'success');
-    } else {
-      document.getElementById('promptInput').value = savedPrompt;
-      document.getElementById('negPrompt').value = savedNeg;
-      showToast(data.error || '提交失败', 'error');
-    }
-  } catch(e) {
-    document.getElementById('promptInput').value = savedPrompt;
-    document.getElementById('negPrompt').value = savedNeg;
-    showToast('网络错误: ' + (e.message || '未知错误'), 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:18px;height:18px;"><path d="M12 3l2 6h6l-5 4 2 6-5-3.5L7 19l2-6-5-4h6z"/></svg> 开始生成';
-  }
+  feed.innerHTML = tasks.map(task => {
+    const isVideo = task.type === 'video'; const active = task.status === 'pending' || task.status === 'processing';
+    const urls = (task.output_url || '').split(',').filter(Boolean);
+    const meta = `${task.model||''} · ${task.duration ? task.duration+'s · ' : ''}${task.ratio||''} · ${task.resolution||''}`;
+    let asset = '';
+    if (active) asset = `<div class="asset-placeholder"><div><div class="loader"></div><p>${task.status==='pending'?'排队中，等待生成':'正在生成，请稍候'}</p></div></div>`;
+    else if (task.status === 'failed') asset = `<div class="asset-placeholder" style="color:var(--red);"><div><div style="font-size:24px;text-align:center;">×</div><p>生成失败 · ${escapeHtml(task.error_message || '服务暂时繁忙')}</p></div></div>`;
+    else if (isVideo && urls[0]) asset = `<video data-preview-url="${escapeHtml(resolveUrl(urls[0]))}" src="${escapeHtml(resolveUrl(urls[0]))}" controls preload="none" playsinline></video>`;
+    else if (urls.length > 1) asset = `<div class="asset-grid ${urls.length>=4?'four':'two'}">${urls.map(u=>`<img data-preview-url="${escapeHtml(resolveUrl(u))}" src="${escapeHtml(resolveUrl(u))}" loading="lazy" alt="">`).join('')}</div>`;
+    else if (urls[0]) asset = `<img data-preview-url="${escapeHtml(resolveUrl(urls[0]))}" src="${escapeHtml(resolveUrl(urls[0]))}" loading="lazy" alt="">`;
+    else asset = `<div class="asset-placeholder"><p>暂无可预览结果</p></div>`;
+    return `<article class="message" data-task-id="${task.id}"><div class="message-head"><div class="message-avatar"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l2 6h6l-5 4 2 6-5-3.5L7 19l2-6-5-4h6z"/></svg></div><div class="message-copy"><div class="message-prompt">${escapeHtml(task.prompt)}</div><div class="message-meta"><b>${isVideo?'视频生成':'图片生成'}</b><span>·</span><span>${escapeHtml(meta)}</span><span>·</span><span>${formatTime(task.created_at)}</span></div></div><div class="message-actions"><button type="button" data-action="retry" title="重新生成">↻</button><button type="button" data-action="more" title="更多">···</button></div></div><div class="asset" data-asset-id="${task.id}">${asset}<div class="asset-footer"><span class="asset-status ${active?'processing':''}"><span class="dot"></span>${task.status==='completed'?'已完成':task.status==='failed'?'失败':task.status==='pending'?'排队中':'生成中'}</span><span class="spacer"></span>${urls.length?`<button type="button" data-action="download">下载</button>`:''}<button type="button" data-action="retry">再次生成</button></div></div></article>`;
+  }).join('');
 }
 
 async function refreshTasks() {
+  if (refreshInFlight || document.hidden) return;
+  refreshInFlight = true;
   try {
-    const res = await fetch(API_BASE + '/api/tasks?limit=100');
-    const data = await res.json();
-    renderGallery(data.tasks || []);
+    const r = await fetch(`${window.API_BASE}/api/tasks?limit=100`, { cache:'no-store' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const d = await r.json(); const tasks = Array.isArray(d.tasks) ? d.tasks : [];
+    setConnection(true);
+    const sig = taskSignature(tasks);
+    if (sig !== lastSignature) { lastSignature = sig; tasksCache = new Map(tasks.map(t => [String(t.id), t])); applyFilters(); }
+    const active = tasks.some(t => t.status === 'pending' || t.status === 'processing');
+    schedulePolling(active ? 2600 : 12000);
   } catch(e) {
-    console.warn('[中转站] 刷新任务失败:', e.message);
-  }
+    setConnection(false); schedulePolling(12000);
+  } finally { refreshInFlight = false; }
+}
+function schedulePolling(ms) { clearTimeout(pollTimer); pollTimer = setTimeout(refreshTasks, ms); }
+async function checkHealth() {
+  try { const r=await fetch(`${window.API_BASE}/api/health`,{cache:'no-store'}); setConnection(r.ok); } catch(e) { setConnection(false); }
+  healthTimer = setTimeout(checkHealth, 20000);
 }
 
-function renderGallery(tasks) {
-  let filtered = tasks;
-
-  if (sidebarFilter !== 'all') {
-    filtered = filtered.filter(t => t.type === sidebarFilter);
-  }
-  if (resultFilter === 'completed') {
-    filtered = filtered.filter(t => t.status === 'completed');
-  } else if (resultFilter === 'processing') {
-    filtered = filtered.filter(t => t.status === 'pending' || t.status === 'processing');
-  }
-
-  // Update task count with filtered number
-  document.getElementById('taskCount').textContent = `共 ${tasks.length} 个任务`;
-
-  const gallery = document.getElementById('gallery');
-  if (filtered.length === 0) {
-    const hasFilters = sidebarFilter !== 'all' || resultFilter !== 'all';
-    const msg = hasFilters ? '当前筛选条件下无结果' : '还没有作品';
-    const sub = hasFilters ? '尝试调整筛选条件' : '在左侧面板输入提示词开始创作';
-
-    gallery.innerHTML = `<div class="empty-state">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
-      <div style="font-size:14px;color:var(--text-secondary);">${msg}</div>
-      ${sub ? `<div style="font-size:12px;color:var(--text-muted);">${sub}</div>` : ''}
-    </div>`;
-    return;
-  }
-
-  gallery.innerHTML = filtered.map(t => {
-    const isVideo = t.type === 'video';
-    const statusClass = t.status;
-    const statusMap = { pending:'排队中', processing:'生成中', completed:'已完成', failed:'失败' };
-    const resUrl = (u) => u && (u.startsWith('/') && !u.startsWith('//') ? API_BASE.replace(/\/+$/, '') + u : u);
-    const encUrl = (u) => (resUrl(u) || '').replace(/'/g, '\\\'');
-
-    let mediaHTML = '';
-    if (t.status === 'processing' || t.status === 'pending') {
-      const isPending = t.status === 'pending';
-      mediaHTML = `<div class="processing-placeholder">
-        <div class="pending-dot ${isPending ? '' : 'spinner'}"></div>
-        <span style="font-size:12px;color:var(--text-muted);">${statusMap[t.status]}</span>
-      </div>`;
-    } else if (t.status === 'completed' && t.output_url) {
-      const urls = t.output_url.split(',');
-      const mainUrl = resUrl(urls[0]);
-      if (isVideo) {
-        mediaHTML = `<video src="${mainUrl}" controls preload="none" playsinline onclick="event.stopPropagation()" style="width:100%;height:100%;object-fit:cover;"></video>`;
-      } else {
-        mediaHTML = `<img src="${mainUrl}" alt="${escapeHtml(t.prompt)}" loading="lazy" onerror="this.style.display=&quot;none&quot;;this.parentElement.innerHTML=&quot;&lt;div class=&apos;processing-placeholder&apos; style=&apos;color:var(--text-muted)&apos;&gt;加载失败&lt;/div&gt;&quot;">`;
-      }
-    } else if (t.status === 'failed') {
-      mediaHTML = `<div class="processing-placeholder" style="color:var(--red);">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:24px;height:24px;"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
-        <span style="font-size:11px;">生成失败</span>
-      </div>`;
-    }
-
-    let dlButtons = '';
-    if (t.status === 'completed' && t.output_url) {
-      const urls = t.output_url.split(',');
-      dlButtons = urls.map((u,i) => `<a href="${resUrl(u)}" target="_blank" download onclick="event.stopPropagation()">下载${urls.length>1?i+1:''}</a>`).join('');
-    }
-
-    const errorInfo = t.status === 'failed' && t.error_message
-      ? `<div style="font-size:11px;color:var(--red);margin-top:4px;line-height:1.3;" title="${escapeHtml(t.error_message)}">${escapeHtml(t.error_message.length > 60 ? t.error_message.substring(0,60)+'...' : t.error_message)}</div>` : '';
-
-    const modelTag = t.model ? t.model.replace('jimeng-','').replace('video-','v') : '';
-
-    const cardOnclick = t.status === 'completed' && t.output_url
-      ? `onclick="openPreview('${encUrl(t.output_url.split(',')[0])}',${isVideo})"`
-      : '';
-
-    return `<div class="card" ${cardOnclick}>
-      <div class="card-media">
-        <span class="type-badge">${isVideo?'视频':'图片'}</span>
-        ${t.status !== 'completed' ? `<span class="status-badge ${statusClass}">${statusMap[t.status]}</span>` : ''}
-        ${mediaHTML}
-      </div>
-      <div class="card-info">
-        <div class="card-prompt">${escapeHtml(t.prompt)}</div>
-        <div class="card-meta">
-          <span class="model-tag">${modelTag}</span>
-          <span class="ratio-tag">${t.ratio||'1:1'}</span>
-          <span style="color:var(--text-muted);">#${t.id}</span>
-        </div>
-        ${dlButtons ? `<div class="card-dl">${dlButtons}</div>` : ''}
-        ${errorInfo}
-      </div>
-    </div>`;
-  }).join('');
+async function submitTask() {
+  const prompt = promptInput.value.trim(); if (!prompt) { promptInput.focus(); setToast('请输入提示词','error'); return; }
+  const btn = $('sendBtn'); btn.disabled = true; btn.classList.remove('ready');
+  const payload = { type: currentMode, prompt, model:selectedModel, ratio:$('ratioSelect').value, resolution:$('resSelect').value, duration:Number($('durationSelect').value), video_mode:$('refModeSelect').value };
+  try {
+    const r = await fetch(`${window.API_BASE}/api/tasks`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
+    const d = await r.json(); if (!r.ok || !d.success) throw new Error(d.error || '提交失败');
+    promptInput.value=''; promptInput.dispatchEvent(new Event('input')); setToast('已提交，结果会自动出现在当前对话','success'); refreshTasks();
+  } catch(e) { setToast(e.message || '后端离线，请稍后重试','error'); btn.disabled=false; btn.classList.add('ready'); }
 }
 
-function openPreview(url, isVideo) {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.onclick = () => closeModal(overlay);
-  const content = document.createElement('div');
-  content.className = 'modal-content';
-  content.onclick = (e) => e.stopPropagation();
-  if (isVideo) {
-    content.innerHTML = `<video src="${url}" controls autoplay playsinline style="max-width:90vw;max-height:90vh;border-radius:var(--radius);"></video>`;
-  } else {
-    content.innerHTML = `<img src="${url}" style="max-width:90vw;max-height:90vh;border-radius:var(--radius);">`;
-  }
-  const closeBtn = document.createElement('button');
-  closeBtn.className = 'modal-close';
-  closeBtn.type = 'button';
-  closeBtn.innerHTML = '&times;';
-  closeBtn.onclick = () => closeModal(overlay);
-  content.appendChild(closeBtn);
-  overlay.appendChild(content);
-
-  function closeModal(ov) {
-    const v = ov.querySelector('video'); if (v) v.pause();
-    document.removeEventListener('keydown', escHandler);
-    ov.remove();
-  }
-  function escHandler(e) { if (e.key === 'Escape') closeModal(overlay); }
-  document.addEventListener('keydown', escHandler);
-
-  document.body.appendChild(overlay);
+function openModal(url, video) {
+  const modal = document.createElement('div'); modal.className='modal'; modal.innerHTML=`<div class="modal-inner"><button type="button" class="modal-close">×</button>${video?`<video src="${escapeHtml(url)}" controls autoplay playsinline></video>`:`<img src="${escapeHtml(url)}" alt="">`}</div>`;
+  const close=()=>{modal.querySelector('video')?.pause(); modal.remove(); document.removeEventListener('keydown',esc);}; const esc=e=>{if(e.key==='Escape')close();};
+  modal.addEventListener('click',e=>{if(e.target===modal)close();}); modal.querySelector('.modal-inner').addEventListener('click',e=>e.stopPropagation()); modal.querySelector('.modal-close').addEventListener('click',close); document.addEventListener('keydown',esc); document.body.appendChild(modal);
 }
 
-function escapeHtml(s) {
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
-
-let toastTimer;
-function showToast(msg, type) {
-  type = type || 'info';
-  const t = document.getElementById('toast');
-  clearTimeout(toastTimer);
-  t.textContent = msg;
-  t.className = 'toast ' + type + ' show';
-  toastTimer = setTimeout(() => { t.classList.remove('show'); }, 3000);
-}
-
-// Keyboard shortcut
-document.addEventListener('keydown', e => {
-  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
-    e.preventDefault();
-    submitTask();
+document.addEventListener('click', e => {
+  const preview = e.target.closest('[data-preview-url]'); if (preview) { e.stopPropagation(); openModal(preview.dataset.previewUrl, preview.tagName==='VIDEO'); return; }
+  const action = e.target.closest('[data-action]'); const message = e.target.closest('.message');
+  if (action && message) {
+    if (action.dataset.action === 'download') { const media=message.querySelector('[data-preview-url]'); if(media) window.open(media.dataset.previewUrl,'_blank'); }
+    if (action.dataset.action === 'retry') { promptInput.value=message.querySelector('.message-prompt')?.textContent||''; promptInput.dispatchEvent(new Event('input')); promptInput.focus(); setToast('已带入原提示词，可修改后重新生成','info'); }
   }
 });
+
+document.querySelectorAll('.rail-btn[data-rail]').forEach(btn => btn.addEventListener('click',()=>{ document.querySelectorAll('.rail-btn[data-rail]').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); if(btn.dataset.rail!=='generate') setToast('该区域正在准备中','info'); }));
+$('typeFilter').addEventListener('click',()=>setActiveTab(activeTab==='video'?'all':'video'));
+$('statusFilter').addEventListener('click',()=>setActiveTab(activeTab==='processing'?'all':'processing'));
+$('assetsFilter').addEventListener('click',()=>setActiveTab('all'));
+$('timeFilter').addEventListener('click',()=>setToast('当前按最新任务排序','info'));
+
+initControls();
+refreshTasks();
+checkHealth();
+window.addEventListener('beforeunload',()=>{clearTimeout(pollTimer);clearTimeout(healthTimer);});
 </script>
 </body>
 </html>
