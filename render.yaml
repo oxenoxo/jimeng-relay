@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: jimeng-relay
+    env: node
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: JIMENG_TOKEN
+        sync: false
+      - key: PORT
+        value: "3456"
