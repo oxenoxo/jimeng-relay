@@ -11,6 +11,14 @@ TOKEN="2bd762d34e8988f51424f3cedc7604a2"
 PORT="3456"
 LOG="/tmp/jimeng-tunnel.log"
 URL_FILE="$HOME/jimeng-url.txt"
+if [[ -f "$DIR/.env" ]]; then
+  set -a
+  source "$DIR/.env"
+  set +a
+fi
+TOKEN="${JIMENG_TOKEN:-$TOKEN}"
+PORT="${PORT:-3456}"
+ACCESS_PASSWORD="${JIMENG_ACCESS_PASSWORD:-}"
 
 BACKEND_PID=""
 TUNNEL_PID=""
@@ -26,7 +34,7 @@ pkill -f "tunnelmole $PORT" 2>/dev/null || true
 sleep 1
 
 cd "$DIR" || exit 1
-env JIMENG_TOKEN="$TOKEN" PORT="$PORT" NODE_PATH="$DIR/node_modules" "$NODE" "$DIR/app.js" > /tmp/jimeng-backend.log 2>&1 &
+env JIMENG_TOKEN="$TOKEN" JIMENG_ACCESS_PASSWORD="$ACCESS_PASSWORD" PORT="$PORT" NODE_PATH="$DIR/node_modules" "$NODE" "$DIR/app.js" > /tmp/jimeng-backend.log 2>&1 &
 BACKEND_PID=$!
 
 for i in $(seq 1 15); do
