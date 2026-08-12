@@ -2,20 +2,71 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+const crypto = require('crypto');
 const { execFile } = require('child_process');
 const { getDb, createTask, getTask, listTasks, getPendingTask, setTaskStatus } = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3456;
 const JIMENG_TOKEN = process.env.JIMENG_TOKEN || '';
+const ACCESS_PASSWORD = process.env.JIMENG_ACCESS_PASSWORD || '';
+const AUTH_COOKIE = 'jimeng_session';
+const AUTH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+const authSessions = new Map();
+const failedLogins = new Map();
 const OUTPUT_DIR = path.join(__dirname, 'outputs');
 const POLL_INTERVAL = 3000;
 
 // ---- Express Server ----
-app.use(cors());
+app.use(cors({ origin: true, credentials: true }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
-app.use('/outputs', express.static(OUTPUT_DIR));
+
+function parseCookies(req) {
+  return Object.fromEntries((req.headers.cookie || '').split(';').filter(Boolean).map(part => {
+    const i = part.indexOf('=');
+    return [part.slice(0, i).trim(), decodeURIComponent(part.slice(i + 1).trim())];
+  }));
+}
+function getSession(req) {
+  const token = parseCookies(req)[AUTH_COOKIE];
+  const expires = token && authSessions.get(token);
+  if (!expires) return null;
+  if (expires < Date.now()) { authSessions.delete(token); return null; }
+  return token;
+}
+function requireAuth(req, res, next) {
+  if (getSession(req)) return next();
+  res.status(401).json({ error: '需要输入访问密码', code: 'AUTH_REQUIRED' });
+}
+function clientKey(req) { return req.ip || req.headers['x-forwarded-for'] || 'unknown'; }
+
+app.post('/api/auth/login', (req, res) => {
+  const key = clientKey(req);
+  const state = failedLogins.get(key) || { count: 0, blockedUntil: 0 };
+  if (state.blockedUntil > Date.now()) return res.status(429).json({ error: '尝试次数过多，请稍后再试' });
+  if (String(req.body?.password || '') !== ACCESS_PASSWORD) {
+    state.count += 1;
+    if (state.count >= 8) { state.count = 0; state.blockedUntil = Date.now() + 60 * 1000; }
+    failedLogins.set(key, state);
+    return res.status(401).json({ error: '密码不正确' });
+  }
+  failedLogins.delete(key);
+  const token = crypto.randomBytes(32).toString('hex');
+  authSessions.set(token, Date.now() + AUTH_TTL_MS);
+  res.setHeader('Set-Cookie', `${AUTH_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${AUTH_TTL_MS / 1000}`);
+  res.json({ success: true });
+});
+app.get('/api/auth/status', (req, res) => res.json({ authenticated: Boolean(getSession(req)) }));
+app.post('/api/auth/logout', (req, res) => {
+  const token = parseCookies(req)[AUTH_COOKIE];
+  if (token) authSessions.delete(token);
+  res.setHeader('Set-Cookie', `${AUTH_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+  res.json({ success: true });
+});
+
+app.use('/api/tasks', requireAuth);
+app.use('/outputs', requireAuth, express.static(OUTPUT_DIR));
 
 app.post('/api/tasks', (req, res) => {
   const { type, prompt, negative_prompt, model, ratio, resolution, duration, video_mode } = req.body;
