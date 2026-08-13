@@ -30,6 +30,8 @@ function initSchema() {
       resolution TEXT DEFAULT '2k',
       duration INTEGER DEFAULT 5,
       video_mode TEXT DEFAULT 'text_to_video',
+      session_id TEXT DEFAULT '',
+      input_files TEXT DEFAULT '[]',
       status TEXT DEFAULT 'pending' CHECK(status IN ('pending','processing','completed','failed')),
       output_url TEXT DEFAULT '',
       error_message TEXT DEFAULT '',
@@ -41,38 +43,24 @@ function initSchema() {
 
 function migrateSchema() {
   const cols = db.prepare("PRAGMA table_info(tasks)").all().map(c => c.name);
-  if (!cols.includes('type')) {
-    db.exec(`ALTER TABLE tasks ADD COLUMN type TEXT DEFAULT 'image'`);
-  }
-  if (!cols.includes('duration')) {
-    db.exec(`ALTER TABLE tasks ADD COLUMN duration INTEGER DEFAULT 5`);
-  }
-  if (!cols.includes('video_mode')) {
-    db.exec(`ALTER TABLE tasks ADD COLUMN video_mode TEXT DEFAULT 'text_to_video'`);
-  }
-  if (cols.includes('image_url') && !cols.includes('output_url')) {
-    db.exec(`ALTER TABLE tasks RENAME COLUMN image_url TO output_url`);
-  }
-  if (!cols.includes('output_url') && cols.includes('image_url')) {
-    db.exec(`ALTER TABLE tasks RENAME COLUMN image_url TO output_url`);
-  }
+  if (!cols.includes('type')) db.exec(`ALTER TABLE tasks ADD COLUMN type TEXT DEFAULT 'image'`);
+  if (!cols.includes('duration')) db.exec(`ALTER TABLE tasks ADD COLUMN duration INTEGER DEFAULT 5`);
+  if (!cols.includes('video_mode')) db.exec(`ALTER TABLE tasks ADD COLUMN video_mode TEXT DEFAULT 'text_to_video'`);
+  if (!cols.includes('session_id')) db.exec(`ALTER TABLE tasks ADD COLUMN session_id TEXT DEFAULT ''`);
+  if (!cols.includes('input_files')) db.exec(`ALTER TABLE tasks ADD COLUMN input_files TEXT DEFAULT '[]'`);
+  if (cols.includes('image_url') && !cols.includes('output_url')) db.exec(`ALTER TABLE tasks RENAME COLUMN image_url TO output_url`);
 }
 
-function createTask({ prompt, negative_prompt, model, ratio, resolution, type, duration, video_mode }) {
+function createTask({ prompt, negative_prompt, model, ratio, resolution, type, duration, video_mode, session_id, input_files }) {
   const d = getDb();
   const stmt = d.prepare(`
-    INSERT INTO tasks (prompt, negative_prompt, model, ratio, resolution, type, duration, video_mode)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO tasks (prompt, negative_prompt, model, ratio, resolution, type, duration, video_mode, session_id, input_files)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
   const result = stmt.run(
-    prompt,
-    negative_prompt || '',
-    model || 'jimeng-4.5',
-    ratio || '1:1',
-    resolution || '2k',
-    type || 'image',
-    duration || 5,
-    video_mode || 'text_to_video'
+    prompt, negative_prompt || '', model || 'jimeng-4.5', ratio || '1:1', resolution || '2k',
+    type || 'image', duration || 5, video_mode || 'text_to_video', session_id || '',
+    JSON.stringify(Array.isArray(input_files) ? input_files : [])
   );
   return { id: result.lastInsertRowid };
 }
@@ -108,4 +96,8 @@ function setTaskStatus(id, status, extra = {}) {
   d.prepare(`UPDATE tasks SET ${fields.join(', ')} WHERE id = ?`).run(...values);
 }
 
-module.exports = { getDb, createTask, getTask, listTasks, getPendingTask, setTaskStatus };
+function listTasksBySession(sessionId, limit = 100) {
+  return getDb().prepare('SELECT * FROM tasks WHERE session_id = ? ORDER BY id ASC LIMIT ?').all(sessionId, limit);
+}
+
+module.exports = { getDb, createTask, getTask, listTasks, listTasksBySession, getPendingTask, setTaskStatus };
