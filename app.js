@@ -17,7 +17,9 @@ const authSessions = new Map();
 const failedLogins = new Map();
 const OUTPUT_DIR = path.join(__dirname, 'outputs');
 const UPLOAD_DIR = path.join(OUTPUT_DIR, 'uploads');
+const CHUNK_DIR = path.join(UPLOAD_DIR, '.chunks');
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+fs.mkdirSync(CHUNK_DIR, { recursive: true });
 const upload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
@@ -28,6 +30,13 @@ const upload = multer({
     const allowed = /^(image|video|audio)\//i.test(file.mimetype);
     cb(allowed ? null : new Error('仅支持图片、视频和音频素材'), allowed);
   }
+});
+const chunkUpload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, CHUNK_DIR),
+    filename: (_req, _file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}.part`)
+  }),
+  limits: { files: 1, fileSize: 512 * 1024 }
 });
 const POLL_INTERVAL = 3000;
 
@@ -83,16 +92,41 @@ app.use('/api/tasks', requireAuth);
 app.use('/outputs', requireAuth, express.static(OUTPUT_DIR));
 app.use('/api/uploads', requireAuth);
 
+function fileMeta(filePath, name, mime) {
+  const kind = mime.startsWith('image/') ? 'image' : mime.startsWith('video/') ? 'video' : 'audio';
+  const finalName = path.basename(filePath);
+  return { name, mime, size: fs.statSync(filePath).size, kind, url: `/outputs/uploads/${finalName}`, path: filePath };
+}
 app.post('/api/uploads', upload.array('files', 12), (req, res) => {
-  const files = (req.files || []).map(file => ({
-    name: file.originalname,
-    mime: file.mimetype,
-    size: file.size,
-    kind: file.mimetype.startsWith('image/') ? 'image' : file.mimetype.startsWith('video/') ? 'video' : 'audio',
-    url: `/outputs/uploads/${file.filename}`,
-    path: file.path
-  }));
+  const files = (req.files || []).map(file => fileMeta(file.path, file.originalname, file.mimetype));
   res.json({ success: true, files });
+});
+
+app.post('/api/uploads/chunk', chunkUpload.single('chunk'), (req, res) => {
+  const file = req.file;
+  const uploadId = String(req.body.upload_id || '').replace(/[^a-zA-Z0-9_-]/g, '');
+  const index = Number(req.body.index);
+  const total = Number(req.body.total);
+  const originalName = String(req.body.name || '素材');
+  const mime = String(req.body.mime || 'application/octet-stream');
+  if (!file || !uploadId || !Number.isInteger(index) || !Number.isInteger(total) || total < 1 || index < 0 || index >= total) {
+    if (file?.path) fs.unlinkSync(file.path);
+    return res.status(400).json({ error: '分片参数无效' });
+  }
+  const dir = path.join(CHUNK_DIR, uploadId);
+  fs.mkdirSync(dir, { recursive: true });
+  const partPath = path.join(dir, `${index}.part`);
+  fs.renameSync(file.path, partPath);
+  const parts = Array.from({ length: total }, (_, i) => path.join(dir, `${i}.part`));
+  const complete = parts.every(p => fs.existsSync(p));
+  if (!complete) return res.json({ success: true, complete: false, index });
+  const safeExt = path.extname(originalName).toLowerCase().replace(/[^.a-z0-9]/g, '');
+  const finalPath = path.join(UPLOAD_DIR, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${safeExt}`);
+  const out = fs.createWriteStream(finalPath);
+  for (const part of parts) { out.write(fs.readFileSync(part)); fs.unlinkSync(part); }
+  out.end();
+  out.on('finish', () => { fs.rmSync(dir, { recursive: true, force: true }); res.json({ success: true, complete: true, file: fileMeta(finalPath, originalName, mime) }); });
+  out.on('error', err => { fs.rmSync(dir, { recursive: true, force: true }); res.status(500).json({ error: err.message }); });
 });
 
 function normalizeInputFiles(items) {
