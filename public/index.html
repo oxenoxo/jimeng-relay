@@ -121,6 +121,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{
 .material-strip{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 8px 48px;max-height:74px;overflow:auto}
 .material-chip{position:relative;display:flex;align-items:center;gap:6px;max-width:210px;padding:5px 23px 5px 6px;border:1px solid var(--line-strong);border-radius:8px;background:rgba(255,255,255,.055);color:var(--text-2);font-size:10px}
 .material-chip img,.material-chip video{width:28px;height:28px;object-fit:cover;border-radius:5px;background:#090a0d}
+.material-chip audio{width:116px;height:27px}
 .material-kind{width:28px;height:28px;display:grid;place-items:center;border-radius:5px;background:var(--panel-3);color:var(--cyan);font-size:12px}
 .material-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .material-remove{position:absolute;right:3px;top:3px;border:0;background:transparent;color:var(--text-3);cursor:pointer;font-size:14px;line-height:16px}
@@ -290,7 +291,7 @@ function materialIcon(item){return item.kind==='image'?'▧':item.kind==='video'
 function renderMaterials(){
   const strip=$('materialStrip');
   strip.innerHTML=materials.map((item,index)=>{
-    const media=item.kind==='image'?`<img src="${escapeHtml(resolveUrl(item.url))}" alt="">`:item.kind==='video'?`<video src="${escapeHtml(resolveUrl(item.url))}" muted preload="metadata"></video>`:`<span class="material-kind">${materialIcon(item)}</span>`;
+    const media=item.kind==='image'?`<img src="${escapeHtml(resolveUrl(item.url))}" alt="">`:item.kind==='video'?`<video src="${escapeHtml(resolveUrl(item.url))}" muted preload="metadata"></video>`:item.kind==='audio'?`<audio src="${escapeHtml(resolveUrl(item.url))}" controls preload="metadata"></audio>`:`<span class="material-kind">${materialIcon(item)}</span>`;
     return `<div class="material-chip">${media}<span class="material-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span><button type="button" class="material-remove" data-material-index="${index}" title="移除">×</button></div>`;
   }).join('');
   $('uploadHint').textContent=materials.length?`已添加 ${materials.length}/12 个素材，可继续拖入或点击添加`:'可拖入或点击添加图片、视频、音频素材（最多 12 个，单个不超过 80MB）';
