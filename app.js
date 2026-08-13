@@ -3,6 +3,7 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const multer = require('multer');
 const { execFile } = require('child_process');
 const { getDb, createTask, getTask, listTasks, getPendingTask, setTaskStatus } = require('./db');
 
@@ -15,6 +16,19 @@ const AUTH_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const authSessions = new Map();
 const failedLogins = new Map();
 const OUTPUT_DIR = path.join(__dirname, 'outputs');
+const UPLOAD_DIR = path.join(OUTPUT_DIR, 'uploads');
+fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, UPLOAD_DIR),
+    filename: (_req, file, cb) => cb(null, `${Date.now()}-${crypto.randomBytes(6).toString('hex')}${path.extname(file.originalname).toLowerCase()}`)
+  }),
+  limits: { files: 12, fileSize: 80 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const allowed = /^(image|video|audio)\//i.test(file.mimetype);
+    cb(allowed ? null : new Error('仅支持图片、视频和音频素材'), allowed);
+  }
+});
 const POLL_INTERVAL = 3000;
 
 // ---- Express Server ----
@@ -67,9 +81,22 @@ app.post('/api/auth/logout', (req, res) => {
 
 app.use('/api/tasks', requireAuth);
 app.use('/outputs', requireAuth, express.static(OUTPUT_DIR));
+app.use('/api/uploads', requireAuth);
+
+app.post('/api/uploads', upload.array('files', 12), (req, res) => {
+  const files = (req.files || []).map(file => ({
+    name: file.originalname,
+    mime: file.mimetype,
+    size: file.size,
+    kind: file.mimetype.startsWith('image/') ? 'image' : file.mimetype.startsWith('video/') ? 'video' : 'audio',
+    url: `/outputs/uploads/${file.filename}`,
+    path: file.path
+  }));
+  res.json({ success: true, files });
+});
 
 app.post('/api/tasks', (req, res) => {
-  const { type, prompt, negative_prompt, model, ratio, resolution, duration, video_mode } = req.body;
+  const { type, prompt, negative_prompt, model, ratio, resolution, duration, video_mode, session_id, input_files } = req.body;
   if (!prompt || !prompt.trim()) {
     return res.status(400).json({ error: 'prompt 不能为空' });
   }
@@ -83,6 +110,8 @@ app.post('/api/tasks', (req, res) => {
       resolution: resolution || (type === 'video' ? '720p' : '2k'),
       duration: duration || 5,
       video_mode: video_mode || 'text_to_video',
+      session_id: session_id || '',
+      input_files: Array.isArray(input_files) ? input_files : [],
     });
     res.json({ success: true, task: { id: Number(result.id) } });
   } catch (err) {
@@ -103,6 +132,13 @@ app.get('/api/tasks', (req, res) => {
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
+});
+
+app.use((err, _req, res, next) => {
+  if (err instanceof multer.MulterError || err?.message === '仅支持图片、视频和音频素材') {
+    return res.status(400).json({ error: err.message || '素材上传失败' });
+  }
+  next(err);
 });
 
 // ---- Worker (runs in same process) ----
@@ -144,16 +180,37 @@ function findFiles(result) {
 async function processTask(task) {
   setTaskStatus(task.id, 'processing');
   const isVideo = task.type === 'video';
-  const prefix = isVideo ? 'video' : 'image';
-  console.log(`[Worker] 开始 #${task.id} [${task.type}]: ${task.prompt.substring(0, 50)}`);
+  let inputFiles = [];
+  try { inputFiles = JSON.parse(task.input_files || '[]'); } catch (e) { inputFiles = []; }
+  const materials = inputFiles.map(item => typeof item === 'string' ? { path: item, mime: '' } : item).filter(item => item && item.path);
+  const imageInputs = materials.filter(item => String(item.mime || '').startsWith('image/'));
+  const videoInputs = materials.filter(item => String(item.mime || '').startsWith('video/'));
+  const audioInputs = materials.filter(item => String(item.mime || '').startsWith('audio/'));
+  console.log(`[Worker] 开始 #${task.id} [${task.type}]: ${task.prompt.substring(0, 50)}，素材 ${materials.length}（图片${imageInputs.length}/视频${videoInputs.length}/音频${audioInputs.length}）`);
 
-  const args = [prefix, 'generate', '--prompt', task.prompt, '--wait', '--json', '--output-dir', OUTPUT_DIR];
+  let prefix = isVideo ? 'video' : 'image';
+  let args;
+  if (!isVideo && imageInputs.length) {
+    args = ['image', 'edit', '--prompt', task.prompt, '--wait', '--json', '--output-dir', OUTPUT_DIR];
+    imageInputs.slice(0, 10).forEach(item => args.push('--image', item.path));
+  } else {
+    args = [prefix, 'generate', '--prompt', task.prompt, '--wait', '--json', '--output-dir', OUTPUT_DIR];
+  }
   if (isVideo) {
-    args.push('--model', task.model || 'jimeng-video-3.0-fast');
+    let mode = task.video_mode || 'text_to_video';
+    if (videoInputs.length || imageInputs.length > 1) mode = 'omni_reference';
+    else if (imageInputs.length === 1) mode = 'image_to_video';
+    args.push('--model', task.model || (mode === 'omni_reference' ? 'jimeng-video-seedance-2.0-fast' : 'jimeng-video-3.0-fast'));
     args.push('--ratio', task.ratio || '16:9');
     args.push('--resolution', task.resolution || '720p');
     args.push('--duration', String(task.duration || 5));
-    args.push('--mode', task.video_mode || 'text_to_video');
+    args.push('--mode', mode);
+    if (mode === 'omni_reference') {
+      imageInputs.slice(0, 9).forEach(item => args.push('--image-file', item.path));
+      videoInputs.slice(0, 3).forEach(item => args.push('--video-file', item.path));
+    } else if (mode === 'image_to_video') {
+      args.push('--image-file', imageInputs[0].path);
+    }
   } else {
     args.push('--model', task.model || 'jimeng-4.5');
     args.push('--ratio', task.ratio || '1:1');
