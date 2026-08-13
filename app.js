@@ -95,6 +95,17 @@ app.post('/api/uploads', upload.array('files', 12), (req, res) => {
   res.json({ success: true, files });
 });
 
+function normalizeInputFiles(items) {
+  if (!Array.isArray(items)) return [];
+  const root = path.resolve(UPLOAD_DIR) + path.sep;
+  return items.map(item => {
+    const source = typeof item === 'string' ? { path: item } : item || {};
+    const filePath = path.resolve(String(source.path || ''));
+    if (!filePath.startsWith(root) || !fs.existsSync(filePath)) return null;
+    return { name: source.name || path.basename(filePath), mime: source.mime || '', kind: source.kind || '', url: source.url || '', path: filePath };
+  }).filter(Boolean).slice(0, 12);
+}
+
 app.post('/api/tasks', (req, res) => {
   const { type, prompt, negative_prompt, model, ratio, resolution, duration, video_mode, session_id, input_files } = req.body;
   if (!prompt || !prompt.trim()) {
@@ -111,7 +122,7 @@ app.post('/api/tasks', (req, res) => {
       duration: duration || 5,
       video_mode: video_mode || 'text_to_video',
       session_id: session_id || '',
-      input_files: Array.isArray(input_files) ? input_files : [],
+      input_files: normalizeInputFiles(input_files),
     });
     res.json({ success: true, task: { id: Number(result.id) } });
   } catch (err) {
