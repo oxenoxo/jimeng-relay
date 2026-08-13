@@ -296,16 +296,24 @@ function renderMaterials(){
   }).join('');
   $('uploadHint').textContent=materials.length?`已添加 ${materials.length}/12 个素材，可继续拖入或点击添加`:'可拖入或点击添加图片、视频、音频素材（最多 12 个，单个不超过 80MB）';
 }
+function sendUploadChunk(form){return new Promise((resolve,reject)=>{const xhr=new XMLHttpRequest();xhr.open('POST',`${window.API_BASE}/api/uploads/chunk`);xhr.withCredentials=true;xhr.upload.onprogress=e=>{if(e.lengthComputable){const pct=Math.round(e.loaded/e.total*100);$('uploadHint').textContent=`正在上传素材…本片段 ${pct}%`}};xhr.onload=()=>{try{const d=JSON.parse(xhr.responseText||'{}');if(xhr.status>=200&&xhr.status<300&&d.success)resolve(d);else reject(new Error(d.error||`上传失败（${xhr.status}）`))}catch(e){reject(new Error('上传响应无效'))}};xhr.onerror=()=>reject(new Error('网络连接中断'));xhr.ontimeout=()=>reject(new Error('上传超时'));xhr.timeout=30000;xhr.send(form)})}
+async function uploadOneMaterial(file,fileIndex,fileCount){
+  const chunkSize=384*1024,total=Math.max(1,Math.ceil(file.size/chunkSize));const uploadId=`${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  for(let index=0;index<total;index++){
+    const start=index*chunkSize;const end=Math.min(file.size,start+chunkSize);const form=new FormData();form.append('chunk',file.slice(start,end),file.name);form.append('upload_id',uploadId);form.append('index',String(index));form.append('total',String(total));form.append('name',file.name);form.append('mime',file.type);
+    let lastError=null;for(let attempt=0;attempt<3;attempt++){try{const result=await sendUploadChunk(form);if(result.complete)return result.file;lastError=null;break}catch(e){lastError=e;await new Promise(r=>setTimeout(r,400*(attempt+1)))}}if(lastError)throw lastError;
+    $('uploadHint').textContent=`正在上传素材…${fileIndex+1}/${fileCount}，第 ${index+1}/${total} 片`;
+  }
+  throw new Error('素材分片未完成');
+}
 async function uploadMaterials(fileList){
   const incoming=Array.from(fileList||[]);if(!incoming.length)return;
   const available=12-materials.length;if(incoming.length>available){setToast(`最多添加 12 个素材，已忽略多余文件`,'error');incoming.splice(available)}
   const invalid=incoming.filter(file=>!/^(image|video|audio)\//i.test(file.type)||file.size>80*1024*1024);
   if(invalid.length){setToast('仅支持图片、视频、音频，单个文件不超过 80MB','error');return}
-  const form=new FormData();incoming.forEach(file=>form.append('files',file));
   try{
-    $('uploadHint').textContent='正在上传素材…';
-    const r=await fetch(`${window.API_BASE}/api/uploads`,{method:'POST',credentials:'include',body:form});const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'素材上传失败');
-    materials.push(...d.files);renderMaterials();setToast(`已添加 ${d.files.length} 个素材`,'success');
+    const uploaded=[];for(let i=0;i<incoming.length;i++){uploaded.push(await uploadOneMaterial(incoming[i],i,incoming.length))}
+    materials.push(...uploaded);renderMaterials();setToast(`已添加 ${uploaded.length} 个素材`,'success');
   }catch(e){renderMaterials();setToast(e.message||'素材上传失败','error')}
 }
 $('uploadBtn').addEventListener('click',()=>$('fileInput').click());
