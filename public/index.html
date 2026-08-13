@@ -115,6 +115,17 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{
 .composer-main{display:flex;align-items:flex-start;gap:10px}
 .upload-btn{width:38px;height:42px;border:1px dashed rgba(255,255,255,.18);border-radius:9px;background:rgba(255,255,255,.035);color:var(--text-3);display:grid;place-items:center;cursor:pointer;flex:0 0 auto}
 .upload-btn:hover{color:var(--text);border-color:var(--cyan)}
+.upload-zone{position:relative;width:100%;border:1px dashed transparent;border-radius:11px;transition:.16s}
+.upload-zone.drag-over{border-color:var(--cyan);background:var(--cyan-soft);box-shadow:0 0 0 4px rgba(84,213,217,.08)}
+.upload-zone.drag-over::after{content:'松开即可添加素材';position:absolute;inset:0;display:grid;place-items:center;border-radius:10px;background:rgba(12,13,16,.84);color:var(--cyan);font-size:12px;pointer-events:none}
+.material-strip{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 8px 48px;max-height:74px;overflow:auto}
+.material-chip{position:relative;display:flex;align-items:center;gap:6px;max-width:210px;padding:5px 23px 5px 6px;border:1px solid var(--line-strong);border-radius:8px;background:rgba(255,255,255,.055);color:var(--text-2);font-size:10px}
+.material-chip img,.material-chip video{width:28px;height:28px;object-fit:cover;border-radius:5px;background:#090a0d}
+.material-kind{width:28px;height:28px;display:grid;place-items:center;border-radius:5px;background:var(--panel-3);color:var(--cyan);font-size:12px}
+.material-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.material-remove{position:absolute;right:3px;top:3px;border:0;background:transparent;color:var(--text-3);cursor:pointer;font-size:14px;line-height:16px}
+.material-remove:hover{color:var(--red)}
+.upload-hint{color:var(--text-3);font-size:10px;margin:0 0 8px 48px}
 .prompt-box{flex:1;min-width:0}
 .prompt-input{width:100%;min-height:44px;max-height:130px;resize:none;color:var(--text);background:transparent;border:0;outline:none;line-height:1.55;padding:3px 0}
 .prompt-input::placeholder{color:#777b86}
@@ -184,11 +195,15 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,a:focus-visible{
 </div>
 <div class="composer-dock">
   <section class="composer" aria-label="创作输入区">
-    <div class="composer-main">
-      <button type="button" class="upload-btn" id="uploadBtn" title="上传参考图（即将支持）"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg><input id="fileInput" type="file" accept="image/*" multiple hidden></button>
-      <div class="prompt-box">
-        <textarea id="promptInput" class="prompt-input" maxlength="2000" placeholder="输入文字描述你想要的画面..."></textarea>
-        <div class="prompt-hint"><span>中文创作，描述越具体效果越好</span><span id="charCount">0/2000 · ⌘↵ 生成</span></div>
+    <div class="upload-zone" id="uploadZone">
+      <div class="material-strip" id="materialStrip"></div>
+      <div class="upload-hint" id="uploadHint">可拖入或点击添加图片、视频、音频素材（最多 12 个，单个不超过 80MB）</div>
+      <div class="composer-main">
+        <button type="button" class="upload-btn" id="uploadBtn" title="添加素材"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 5v14M5 12h14"/><rect x="4" y="4" width="16" height="16" rx="3"/></svg><input id="fileInput" type="file" accept="image/*,video/*,audio/*" multiple hidden></button>
+        <div class="prompt-box">
+          <textarea id="promptInput" class="prompt-input" maxlength="2000" placeholder="输入文字描述你想要的画面，或把素材拖到这里..."></textarea>
+          <div class="prompt-hint"><span>中文创作，描述越具体效果越好</span><span id="charCount">0/2000 · ⌘↵ 生成</span></div>
+        </div>
       </div>
     </div>
     <div class="composer-controls">
@@ -228,11 +243,11 @@ const RATIOS={image:['1:1','16:9','9:16','4:3','3:4','21:9'],video:['16:9','9:16
 const RES={image:['2k','4k'],video:['720p','1080p']};
 let currentMode='video',selectedModel=VIDEO_MODELS[0].id,activeFilter='all',selectedSession='default';
 let modeState={image:{model:IMG_MODELS[0].id,ratio:'1:1',res:'2k'},video:{model:VIDEO_MODELS[0].id,ratio:'16:9',res:'720p'}};
-let tasksCache=new Map(),lastSignature='',pollTimer=null,healthTimer=null,refreshInFlight=false,toastTimer=null,authenticated=false;
+let tasksCache=new Map(),lastSignature='',pollTimer=null,healthTimer=null,refreshInFlight=false,toastTimer=null,authenticated=false,materials=[];
 
 async function initAuth(){
   try{
-    const r=await fetch('/api/auth/status',{cache:'no-store'});const d=await r.json();
+    const r=await fetch('/api/auth/status',{cache:'no-store',credentials:'include'});const d=await r.json();
     if(d.authenticated){unlockApp();return}
   }catch(e){}
   $('authScreen').style.display='grid';$('app').classList.add('locked');$('authPassword').focus();
@@ -240,7 +255,7 @@ async function initAuth(){
 function unlockApp(){authenticated=true;$('authScreen').style.display='none';$('app').classList.remove('locked');renderSelects();refreshTasks();checkHealth()}
 $('authForm').addEventListener('submit',async e=>{
   e.preventDefault();const btn=$('authSubmit');const error=$('authError');btn.disabled=true;error.textContent='';
-  try{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:$('authPassword').value})});const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'密码不正确');$('authPassword').value='';unlockApp()}catch(err){error.textContent=err.message||'密码不正确';$('authPassword').select()}finally{btn.disabled=false}
+  try{const r=await fetch('/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify({password:$('authPassword').value})});const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'密码不正确');$('authPassword').value='';unlockApp()}catch(err){error.textContent=err.message||'密码不正确';$('authPassword').select()}finally{btn.disabled=false}
 });
 
 function resolveUrl(url){if(!url)return'';if(/^https?:\/\//i.test(url))return url;const base=(window.API_BASE||location.origin).replace(/\/+$/,'');return url.startsWith('/')?base+url:base+'/'+url}
@@ -271,8 +286,35 @@ promptInput.addEventListener('keydown',e=>{if((e.metaKey||e.ctrlKey)&&e.key==='E
 $('sendBtn').addEventListener('click',submitTask);
 $('newChat').addEventListener('click',()=>{selectedSession='session_'+Date.now();promptInput.value='';promptInput.dispatchEvent(new Event('input'));applyFilters();setToast('新对话已创建','success')});
 $('examplePrompt').addEventListener('click',()=>{promptInput.value='电影质感，海边公路上的银色跑车沿着悬崖缓慢行驶，夕阳从海面洒下金色光线，镜头平稳跟拍，画面细节丰富';promptInput.dispatchEvent(new Event('input'))});
+function materialIcon(item){return item.kind==='image'?'▧':item.kind==='video'?'▶':'♫'}
+function renderMaterials(){
+  const strip=$('materialStrip');
+  strip.innerHTML=materials.map((item,index)=>{
+    const media=item.kind==='image'?`<img src="${escapeHtml(resolveUrl(item.url))}" alt="">`:item.kind==='video'?`<video src="${escapeHtml(resolveUrl(item.url))}" muted preload="metadata"></video>`:`<span class="material-kind">${materialIcon(item)}</span>`;
+    return `<div class="material-chip">${media}<span class="material-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</span><button type="button" class="material-remove" data-material-index="${index}" title="移除">×</button></div>`;
+  }).join('');
+  $('uploadHint').textContent=materials.length?`已添加 ${materials.length}/12 个素材，可继续拖入或点击添加`:'可拖入或点击添加图片、视频、音频素材（最多 12 个，单个不超过 80MB）';
+}
+async function uploadMaterials(fileList){
+  const incoming=Array.from(fileList||[]);if(!incoming.length)return;
+  const available=12-materials.length;if(incoming.length>available){setToast(`最多添加 12 个素材，已忽略多余文件`,'error');incoming.splice(available)}
+  const invalid=incoming.filter(file=>!/^(image|video|audio)\//i.test(file.type)||file.size>80*1024*1024);
+  if(invalid.length){setToast('仅支持图片、视频、音频，单个文件不超过 80MB','error');return}
+  const form=new FormData();incoming.forEach(file=>form.append('files',file));
+  try{
+    $('uploadHint').textContent='正在上传素材…';
+    const r=await fetch(`${window.API_BASE}/api/uploads`,{method:'POST',credentials:'include',body:form});const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'素材上传失败');
+    materials.push(...d.files);renderMaterials();setToast(`已添加 ${d.files.length} 个素材`,'success');
+  }catch(e){renderMaterials();setToast(e.message||'素材上传失败','error')}
+}
 $('uploadBtn').addEventListener('click',()=>$('fileInput').click());
-$('fileInput').addEventListener('change',e=>{if(e.target.files.length)setToast(`已选择 ${e.target.files.length} 个参考素材，上传能力即将接入`,'info')});
+$('fileInput').addEventListener('change',e=>{uploadMaterials(e.target.files);e.target.value='' });
+const uploadZone=$('uploadZone');
+['dragenter','dragover'].forEach(type=>uploadZone.addEventListener(type,e=>{e.preventDefault();e.stopPropagation();uploadZone.classList.add('drag-over')}));
+['dragleave','drop'].forEach(type=>uploadZone.addEventListener(type,e=>{e.preventDefault();e.stopPropagation();if(type==='dragleave'&&e.relatedTarget&&uploadZone.contains(e.relatedTarget))return;uploadZone.classList.remove('drag-over')}));
+uploadZone.addEventListener('drop',e=>uploadMaterials(e.dataTransfer.files));
+document.addEventListener('paste',e=>{const files=Array.from(e.clipboardData?.files||[]);if(files.length)uploadMaterials(files)});
+$('materialStrip').addEventListener('click',e=>{const btn=e.target.closest('[data-material-index]');if(!btn)return;materials.splice(Number(btn.dataset.materialIndex),1);renderMaterials()});
 $('collapseSessions').addEventListener('click',()=>{const p=$('sessionsPanel');p.style.display=p.style.display==='none'?'':'none';setToast(p.style.display==='none'?'侧栏已收起':'侧栏已展开','info')});
 
 $('filterAll').addEventListener('click',()=>{activeFilter='all';applyFilters()});
@@ -326,7 +368,7 @@ function formatTime(dateText){const raw=String(dateText||'').trim();if(!raw)retu
 function taskSignature(tasks){return tasks.map(t=>`${t.id}|${t.status}|${t.output_url||''}|${t.error_message||''}|${t.session_id||''}`).join('~')}
 async function refreshTasks(){
   if(!authenticated||refreshInFlight||document.hidden)return;refreshInFlight=true;
-  try{const r=await fetch(`${window.API_BASE}/api/tasks?limit=200`,{cache:'no-store'});if(!r.ok)throw new Error(`HTTP ${r.status}`);const d=await r.json();const tasks=Array.isArray(d.tasks)?d.tasks:[];setConnection(true);const sig=taskSignature(tasks);if(sig!==lastSignature){lastSignature=sig;tasksCache=new Map(tasks.map(t=>[String(t.id),t]));applyFilters()}const active=tasks.some(t=>t.status==='pending'||t.status==='processing');schedulePolling(active?2600:12000)}catch(e){setConnection(false);schedulePolling(12000)}finally{refreshInFlight=false}
+  try{const r=await fetch(`${window.API_BASE}/api/tasks?limit=200`,{cache:'no-store',credentials:'include'});if(!r.ok)throw new Error(`HTTP ${r.status}`);const d=await r.json();const tasks=Array.isArray(d.tasks)?d.tasks:[];setConnection(true);const sig=taskSignature(tasks);if(sig!==lastSignature){lastSignature=sig;tasksCache=new Map(tasks.map(t=>[String(t.id),t]));applyFilters()}const active=tasks.some(t=>t.status==='pending'||t.status==='processing');schedulePolling(active?2600:12000)}catch(e){setConnection(false);schedulePolling(12000)}finally{refreshInFlight=false}
 }
 function schedulePolling(ms){clearTimeout(pollTimer);pollTimer=setTimeout(refreshTasks,ms)}
 async function checkHealth(){try{const r=await fetch(`${window.API_BASE}/api/health`,{cache:'no-store'});setConnection(r.ok)}catch(e){setConnection(false)};healthTimer=setTimeout(checkHealth,20000)}
@@ -337,8 +379,19 @@ async function submitTask(){
   const prompt=promptInput.value.trim();if(!prompt){promptInput.focus();setToast('请输入提示词','error');return}
   const btn=$('sendBtn');btn.disabled=true;btn.classList.remove('ready');
   const st=currentMode==='video'?modeState.video:modeState.image;
-  const payload={type:currentMode,prompt,model:st.model,ratio:st.ratio,resolution:st.res,duration:Number($('durationSelect').value),video_mode:'text_to_video',session_id:selectedSession};
-  try{const r=await fetch(`${window.API_BASE}/api/tasks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'提交失败');promptInput.value='';promptInput.dispatchEvent(new Event('input'));setToast('已提交，结果会自动出现在当前对话','success');refreshTasks()}catch(e){setToast(e.message||'后端离线，请稍后重试','error');btn.disabled=false;btn.classList.add('ready')}
+  const payload={type:currentMode,prompt,model:st.model,ratio:st.ratio,resolution:st.res,duration:Number($('durationSelect').value),video_mode:materials.some(m=>m.kind==='video')?'omni_reference':materials.length?'image_to_video':'text_to_video',session_id:selectedSession,input_files:materials};
+  try{const r=await fetch(`${window.API_BASE}/api/tasks`,{method:'POST',headers:{'Content-Type':'application/json'},credentials:'include',body:JSON.stringify(payload)});const d=await r.json();if(!r.ok||!d.success)throw new Error(d.error||'提交失败');promptInput.value='';promptInput.dispatchEvent(new Event('input'));materials=[];renderMaterials();setToast('已提交，结果会自动出现在当前对话','success');refreshTasks()}catch(e){setToast(e.message||'后端离线，请稍后重试','error');btn.disabled=false;btn.classList.add('ready')}
+}
+function loadTaskForRetry(task){
+  if(!task)return;
+  currentMode=task.type==='video'?'video':'image';
+  const state=currentMode==='video'?modeState.video:modeState.image;
+  state.model=task.model||state.model;state.ratio=task.ratio||state.ratio;state.res=task.resolution||state.res;
+  renderSelects();
+  if(currentMode==='video'&&task.duration)$('durationSelect').value=String(task.duration);
+  promptInput.value=task.prompt||'';promptInput.dispatchEvent(new Event('input'));
+  try{materials=JSON.parse(task.input_files||'[]').map(item=>typeof item==='string'?{name:item.split('/').pop(),kind:'image',mime:'image/*',url:item}:item).filter(item=>item.url)}catch(e){materials=[]}
+  renderMaterials();promptInput.focus();setToast('已恢复原提示词、素材和生成模式，可直接再次生成','info');
 }
 function openModal(url,video){const modal=document.createElement('div');modal.className='modal';modal.innerHTML=`<div class="modal-inner"><button type="button" class="modal-close">×</button>${video?`<video src="${escapeHtml(url)}" controls autoplay playsinline></video>`:`<img src="${escapeHtml(url)}" alt="">`}</div>`;const close=()=>{modal.querySelector('video')?.pause();modal.remove();document.removeEventListener('keydown',esc)};const esc=e=>{if(e.key==='Escape')close()};modal.addEventListener('click',e=>{if(e.target===modal)close()});modal.querySelector('.modal-inner').addEventListener('click',e=>e.stopPropagation());modal.querySelector('.modal-close').addEventListener('click',close);document.addEventListener('keydown',esc);document.body.appendChild(modal)}
 
@@ -348,7 +401,7 @@ document.addEventListener('click',e=>{
   const preview=e.target.closest('[data-preview-url]');
   if(preview){if(e.target.closest('video')&&(e.target.tagName==='VIDEO'||e.target.closest('video[controls]')))return;e.stopPropagation();openModal(preview.dataset.previewUrl,preview.tagName==='VIDEO');return}
   const action=e.target.closest('[data-action]');const message=e.target.closest('.message');
-  if(action&&message){if(action.dataset.action==='download'){const media=message.querySelector('[data-preview-url]');if(media)window.open(media.dataset.previewUrl,'_blank')}if(action.dataset.action==='retry'){promptInput.value=message.querySelector('.message-prompt')?.textContent||'';promptInput.dispatchEvent(new Event('input'));setToast('已带入原提示词，可修改后重新生成','info')}}
+  if(action&&message){if(action.dataset.action==='download'){const media=message.querySelector('[data-preview-url]');if(media)window.open(media.dataset.previewUrl,'_blank')}if(action.dataset.action==='retry'){loadTaskForRetry(tasksCache.get(String(message.dataset.taskId)))}}
 });
 
 initAuth();
